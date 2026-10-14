@@ -1,0 +1,1499 @@
+{
+  "focusAssets": [
+    "BTC",
+    "ETH",
+    "SOL",
+    "HYPE"
+  ],
+  "compactTemplates": [
+    {
+      "name": "Scalp sDelta LINEAR OKEX",
+      "origin": "uploaded",
+      "sourceFile": "Scalp sDelta LINEAR OKEX.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Scalp sDelta LINEAR OKEX.json",
+      "runningSheet": "okex_BTC-USDT-SWAP",
+      "activePeriodId": 41,
+      "chartType": "Delta Profile",
+      "textType": "Delta",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "619c940597a8e43791202c10cac856d601eaba088766b441ad6fcb8ac9cafbdd"
+    },
+    {
+      "name": "Scalp OKEX SRange linear",
+      "origin": "uploaded",
+      "sourceFile": "Scalp OKEX SRange linear.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Scalp OKEX SRange linear.json",
+      "runningSheet": "okex_BTC-USDT-SWAP",
+      "activePeriodId": 63,
+      "chartType": "Delta Profile",
+      "textType": "Delta",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "a0e8b8ca21f2e1e7ebfd1cb4473d6a2c4fbc74e3f2c7d041b20cdeb1ddd225d9"
+    },
+    {
+      "name": "dTPO OKEX extreme inverse",
+      "origin": "uploaded",
+      "sourceFile": "dTPO OKEX extreme inverse.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/dTPO OKEX extreme inverse.json",
+      "runningSheet": "bybit_BTCUSDT",
+      "activePeriodId": 40,
+      "chartType": "TPO Mono Color",
+      "textType": "TPO Letters",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "825f13bf5f6e437f9751b9f3da2d178d855183e71a3654f260942d668aef487b"
+    },
+    {
+      "name": "dVolPocket OKEX",
+      "origin": "uploaded",
+      "sourceFile": "dVolPocket OKEX.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/dVolPocket OKEX.json",
+      "runningSheet": "okex_BTC-USD-SWAP",
+      "activePeriodId": 35,
+      "chartType": "Bid-Ask Profile",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "07fc8f1e320c73550c97d42cc60c0d56b8a7fd05c3a0af66b74b9a937f6d37d4"
+    },
+    {
+      "name": "dTPO OKEX extreme linear",
+      "origin": "uploaded",
+      "sourceFile": "dTPO OKEX extreme linear.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/dTPO OKEX extreme linear.json",
+      "runningSheet": "bybit_BTCUSDT",
+      "activePeriodId": 40,
+      "chartType": "TPO Mono Color",
+      "textType": "TPO Letters",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "3aea947d6bb8992a38768a2c38aa254575f6a7606ea5ef7780094daee109d13f"
+    },
+    {
+      "name": "Scalp OKEX LRange linear",
+      "origin": "uploaded",
+      "sourceFile": "Scalp OKEX LRange linear.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Scalp OKEX LRange linear.json",
+      "runningSheet": "bybit_BTCUSDT",
+      "activePeriodId": 1013,
+      "chartType": "Bid-Ask Profile",
+      "textType": "Bid-Ask",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "4ae261cc198cb4c54230edb7471d7268db7d2eb1450a509b142413235cf98512"
+    },
+    {
+      "name": "Range Charting OKEX Linear",
+      "origin": "uploaded",
+      "sourceFile": "Range Charting OKEX Linear.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Range Charting OKEX Linear.json",
+      "runningSheet": "bybit_BTCUSDT",
+      "activePeriodId": 1011,
+      "chartType": "Bid-Ask Profile",
+      "textType": "Bid-Ask",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "1bfe6b2aa0e786a5b307fb8502154715e76514b70dd3b9dd308e264c82008e8e"
+    },
+    {
+      "name": "sTPO OKEX extreme linear",
+      "origin": "uploaded",
+      "sourceFile": "sTPO OKEX extreme linear.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/sTPO OKEX extreme linear.json",
+      "runningSheet": "okex_BTC-USDT-SWAP",
+      "activePeriodId": 27,
+      "chartType": "TPO Mono Color",
+      "textType": "TPO Letters",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": false,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "bebea4431a01ed38c19128fd1bb43dcbb5573bd5d8c91d3e2c6793f427f88577"
+    },
+    {
+      "name": "Scalp  sDelta INVERSE OKEX",
+      "origin": "uploaded",
+      "sourceFile": "Scalp  sDelta INVERSE OKEX.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Scalp  sDelta INVERSE OKEX.json",
+      "runningSheet": "okex_BTC-USDT-SWAP",
+      "activePeriodId": 39,
+      "chartType": "Delta Profile",
+      "textType": "Delta",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "79f4d7d55e1ef22f8be6a9469d58d4c1ffa9fb1eff5ebfe5fb0505d50c030f87"
+    },
+    {
+      "name": "sTPO OKEX extreme inverse",
+      "origin": "uploaded",
+      "sourceFile": "sTPO OKEX extreme inverse.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/sTPO OKEX extreme inverse.json",
+      "runningSheet": "okex_BTC-USDT-SWAP",
+      "activePeriodId": 27,
+      "chartType": "TPO Mono Color",
+      "textType": "TPO Letters",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": false,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "79b5d7ac4058098c2cc8583d4553df928cb3367e7eafb7064493eaefb7fe7c6d"
+    },
+    {
+      "name": "Exo - 30m PD High/Low",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - 30m PD High_Low.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - 30m PD High_Low.json",
+      "runningSheet": "okex_BTC-USD-SWAP",
+      "activePeriodId": 24,
+      "chartType": "Void",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "03a628ff7ca7572e8b39efb8c69f47710d2fc1f8caab85a7fcceb55aa5c7d7ae"
+    },
+    {
+      "name": "Exo - 4H Cryptoleptic",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - 4H Cryptoleptic.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - 4H Cryptoleptic.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 32,
+      "chartType": "Delta Cluster",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55,
+        57
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "f9381e8c7c1242b73c5e00599c680465af0e42352207732ac4504a113f2cda35"
+    },
+    {
+      "name": "Exo - 4H OFA",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - 4H OFA.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - 4H OFA.json",
+      "runningSheet": "bybit_BTCUSD",
+      "activePeriodId": 42,
+      "chartType": "Delta Profile",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "9b472f6787d3d74cf452ddfde90629b237a548013bfaff166c01220419d9c732"
+    },
+    {
+      "name": "Exo - 5min SPOT Delta",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - 5min SPOT Delta.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - 5min SPOT Delta.json",
+      "runningSheet": "okex_BTC-USDT",
+      "activePeriodId": 24,
+      "chartType": "Delta Cluster",
+      "textType": "Bid-Ask",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "bfe27d1abeb12032cdd77e096bbb08485497a8e0f0503f091fc3122ae5d98a6e"
+    },
+    {
+      "name": "Exo - Daily VP Overview",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Daily VP Overview.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Daily VP Overview.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 36,
+      "chartType": "Volume Profile",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "cad5756f56b662379d26366ce7e83acdc7d6ce896b16ef3b41c06d49515ba366"
+    },
+    {
+      "name": "Exo - Dark Stingray Reastruth",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Dark Stingray Reastruth.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Dark Stingray Reastruth.json",
+      "runningSheet": "binancefutures_BTCUSDT",
+      "activePeriodId": 16,
+      "chartType": "TPO Mono Color",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        57,
+        91,
+        90,
+        56
+      ],
+      "visibleIndicators": [
+        57,
+        56
+      ],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "1a19fdf13b8dbb315879769a1c2f089403f6023d0316afbcc704e0a92d828d4e"
+    },
+    {
+      "name": "Exo - ETH TPO 3",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - ETH TPO 3.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - ETH TPO 3.json",
+      "runningSheet": "binancefutures_ETHUSDT",
+      "activePeriodId": 16,
+      "chartType": "TPO Mono Color",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": false,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "badfb2fa946cfa350518d1f7f8a683f0565a4c16ab2f7764f24be56647355bc9"
+    },
+    {
+      "name": "Exo - IMBALANCE R-300",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - IMBALANCE R-300.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - IMBALANCE R-300.json",
+      "runningSheet": "okex_BTC-USDT",
+      "activePeriodId": 24,
+      "chartType": "Delta Ladder",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        56,
+        57,
+        55,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        56,
+        57,
+        55
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "854d7b41b141f93ddde082feaa5d8502d3f85203c6da413af468df9f11f56e07"
+    },
+    {
+      "name": "Exo - MP Daily BTC",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - MP Daily BTC.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - MP Daily BTC.json",
+      "runningSheet": "binancefutures_BTCUSDT",
+      "activePeriodId": 32,
+      "chartType": "TPO Mono Color",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "0b9304aa60f72b0a1567583719449245269df50eaf1b7b492900f5f3a0b9781a"
+    },
+    {
+      "name": "Exo - MWD Levels Bybit",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - MWD Levels Bybit.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - MWD Levels Bybit.json",
+      "runningSheet": "bybit_BTCUSD",
+      "activePeriodId": 46,
+      "chartType": "Volume Profile",
+      "textType": "Volume",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        56
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "993393ee531c7f1ef20de92e9d3c7295e0292d2729c03e80bf7f660bb9b79274"
+    },
+    {
+      "name": "Exo - Monthly VP Overview",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Monthly VP Overview.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Monthly VP Overview.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 38,
+      "chartType": "Volume Profile",
+      "textType": "None",
+      "sortedIndicators": [
+        56,
+        57,
+        55,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55,
+        91
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "be573d86a875b6c9a11a4076cf07caf9f5867c24f737f9702789f3daeb04d933"
+    },
+    {
+      "name": "Exo - NightScalper 2",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - NightScalper 2.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - NightScalper 2.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 16,
+      "chartType": "Volume Cluster",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        91,
+        90,
+        57,
+        56
+      ],
+      "visibleIndicators": [
+        91,
+        90
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": false,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "e16b32c89d61b2e6b4eb14d6185cae9d408ae156d63a0b90ff080b1b7e8f4f1a"
+    },
+    {
+      "name": "Exo - NightScalper 3",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - NightScalper 3.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - NightScalper 3.json",
+      "runningSheet": "bybit_BTCUSD",
+      "activePeriodId": 1005,
+      "chartType": "Bid-Ask Profile",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        91,
+        90,
+        57,
+        56
+      ],
+      "visibleIndicators": [
+        55
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": false,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "46b38de64c45210c3ae69bdfd297808235ea3c402aebdfee92578b0c722884ed"
+    },
+    {
+      "name": "Exo - Obvious 3",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Obvious 3.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Obvious 3.json",
+      "runningSheet": "binancefutures_BTCUSDT",
+      "activePeriodId": 16,
+      "chartType": "Bid-Ask Profile",
+      "textType": "Bid-Ask",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "8c8b2b98b9b33dcb6057e81a17cfe56d307dc33ab07e887458e57bd992893410"
+    },
+    {
+      "name": "Exo - Obvious Cluster 2",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Obvious Cluster 2.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Obvious Cluster 2.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 10001,
+      "chartType": "Delta Cluster",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "8e782592db7f9557356fcbe5ea7b427f40e669d3da88c554359ed3bef8769897"
+    },
+    {
+      "name": "Exo - Obvious Cluster ETH",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Obvious Cluster ETH.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Obvious Cluster ETH.json",
+      "runningSheet": "bybit_ETHUSD",
+      "activePeriodId": 26,
+      "chartType": "Delta Cluster",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "cc99b1aa029bafd0bffb9cc0aee6525068276e06c53becdadc3b6759a208746f"
+    },
+    {
+      "name": "Exo - Obvious Cluster OP",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Obvious Cluster OP.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Obvious Cluster OP.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 26,
+      "chartType": "Delta Cluster",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        57
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "ff8cf2c6c05e519f18117ba0c9be818d48d7fac0e8b8cbbe0879dc59a0f70484"
+    },
+    {
+      "name": "Exo - Obvious Cluster",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Obvious Cluster.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Obvious Cluster.json",
+      "runningSheet": "bybit_BTCUSD",
+      "activePeriodId": 40,
+      "chartType": "Delta Cluster",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55,
+        56
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "6c1de544af1be520f7eff6eb29f9856395c6475a0632e910645d9bde1f1e0608"
+    },
+    {
+      "name": "Exo - PnF scalper",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - PnF scalper.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - PnF scalper.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 7,
+      "chartType": "Void",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": null,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "130abb0ccef9e86f6254b4a37b85d3cab8394661fa1b76ca217dce79c199d632"
+    },
+    {
+      "name": "Exo - Range-scalp Okex",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Range-scalp Okex.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Range-scalp Okex.json",
+      "runningSheet": "okex_BTC-USD-SWAP",
+      "activePeriodId": 63,
+      "chartType": "Delta Cluster",
+      "textType": "Bid-Ask",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55,
+        56,
+        57
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "81a019750c7d41fd61600d7cc1cdd248dc072020132f2327a5a89ad14f45260b"
+    },
+    {
+      "name": "Exo - SELL TOPS BUY BOTTOMS",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - SELL TOPS BUY BOTTOMS.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - SELL TOPS BUY BOTTOMS.json",
+      "runningSheet": "bybit_BTCUSD",
+      "activePeriodId": 55,
+      "chartType": "Void",
+      "textType": "None",
+      "sortedIndicators": [
+        56,
+        57,
+        55,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "78b111e1b03461c7e4a763fbbb889ef8a55a0d86a77f7443b91d89980cf52b03"
+    },
+    {
+      "name": "Exo - Scalp Stingray",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Scalp Stingray.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Scalp Stingray.json",
+      "runningSheet": "binancefutures_BNBUSDT",
+      "activePeriodId": 12,
+      "chartType": "Bid-Ask Profile",
+      "textType": "Bid-Ask",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55,
+        56
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "1a2c53ad483dd982354d22efc8078f0e95c95ec5f10c34548bfa4877d06bba93"
+    },
+    {
+      "name": "Exo - Sentiment Bybit",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Sentiment Bybit.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Sentiment Bybit.json",
+      "runningSheet": "bybit_BTCUSD",
+      "activePeriodId": 35,
+      "chartType": "Void",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        91,
+        90,
+        57
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "b1d1133ac8b04b0197c0b7317c54884969deafe7cb11a3d4dd359f56b719e70f"
+    },
+    {
+      "name": "Exo - Sentiment Spot",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Sentiment Spot.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Sentiment Spot.json",
+      "runningSheet": "okex_BTC-USDT",
+      "activePeriodId": 24,
+      "chartType": "Void",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        91,
+        90,
+        57
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "09eed7c986fd3f250b176248f17495e1a56475d23571172bb10a0a1a5b2d7494"
+    },
+    {
+      "name": "Exo - Sentiment Swap",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Sentiment Swap.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Sentiment Swap.json",
+      "runningSheet": "okex_BTC-USD-SWAP",
+      "activePeriodId": 24,
+      "chartType": "Void",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        91,
+        90,
+        57
+      ],
+      "visibleIndicators": [
+        91,
+        90,
+        57
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "c7d5d32ec42a89dba3ef5d1a967427089d0da871b7ef48995caeb850050adb20"
+    },
+    {
+      "name": "Exo - Spot-Tracker",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Spot-Tracker.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Spot-Tracker.json",
+      "runningSheet": "okex_BTC-USDT",
+      "activePeriodId": 21,
+      "chartType": "Delta Cluster",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55,
+        56
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "6a0e3ebcb8226de02bb05f9576585c8d6da23570ea51ae875ec17d33cf1a52e0"
+    },
+    {
+      "name": "Exo - TPO Aestethic",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - TPO Aestethic.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - TPO Aestethic.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 28,
+      "chartType": "TPO Mono Color",
+      "textType": "TPO Letters",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "4f38ff8a0a044953ad1265f70edd9a8cd86bd486014a6ecfe3ddc27ae75653b2"
+    },
+    {
+      "name": "Exo - TPO ColorHeat",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - TPO ColorHeat.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - TPO ColorHeat.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 28,
+      "chartType": "TPO HeatMap",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": false,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "49689860178a5ef42ae571e2df1a4e10a6761b2a51a6802e3a0b1c8ab2945afd"
+    },
+    {
+      "name": "Exo - TPO ETH 2",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - TPO ETH 2.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - TPO ETH 2.json",
+      "runningSheet": "binancefutures_ETHUSDT",
+      "activePeriodId": 16,
+      "chartType": "TPO Mono Color",
+      "textType": "TPO Letters",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": false,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "81956dffb5bc6bc073b2cf3156036e3072d4d8d01ea9caf0c7df43a0613b4558"
+    },
+    {
+      "name": "Exo - TPO Heatmap",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - TPO Heatmap.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - TPO Heatmap.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 28,
+      "chartType": "TPO HeatMap",
+      "textType": "TPO Letters",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        57
+      ],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "447185fe6a4cb27fd6e28f53d59158f830274eb1528ee6ba33e9a7e2095f0e8e"
+    },
+    {
+      "name": "Exo - TPO POC Follow",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - TPO POC Follow.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - TPO POC Follow.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 28,
+      "chartType": "Void",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "c2800dc3a7f758a5d4a8cd43d53281998a014126601690091f7c32eea731312d"
+    },
+    {
+      "name": "Exo - TPO Scalp",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - TPO Scalp.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - TPO Scalp.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 79,
+      "chartType": "TPO Mono Color",
+      "textType": "TPO Letters",
+      "sortedIndicators": [
+        55,
+        91,
+        90,
+        57,
+        56
+      ],
+      "visibleIndicators": [
+        91,
+        90,
+        56
+      ],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": false,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "e21dd68ffc3ba8f6a64cd59f235a781c8ddc00b4bfa81fe6106d25926b75a24f"
+    },
+    {
+      "name": "Exo - TPO Sessions",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - TPO Sessions.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - TPO Sessions.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 28,
+      "chartType": "TPO Mono Color",
+      "textType": "TPO Letters",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": false,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "9c8cef5b3b06c36d408bbdb50a23d486d49e5cd623b5026360f6c384903b8ac4"
+    },
+    {
+      "name": "Exo - TPO VP DejaBrew",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - TPO VP DejaBrew.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - TPO VP DejaBrew.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 28,
+      "chartType": "TPO HeatMap",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "ce9c46dea1897c18eb44007bb1e595ac1711f54225c07c1ac297859c67b836d9"
+    },
+    {
+      "name": "Exo - TPO Volume Scalp (Session Zones)",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - TPO Volume Scalp (Session Zones).txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - TPO Volume Scalp _Session Zones_.json",
+      "runningSheet": "bybit_BTCUSD",
+      "activePeriodId": 64,
+      "chartType": "TPO Mono Color",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        91,
+        90,
+        57,
+        56
+      ],
+      "visibleIndicators": [
+        56
+      ],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "8b7057db607bf16ca44bef37ca1504aff2c7a9863b479abde4a0c67590eccaf3"
+    },
+    {
+      "name": "Exo - TPZero Delta Daily",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - TPZero Delta Daily.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - TPZero Delta Daily.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 28,
+      "chartType": "TPO Mono Color",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "7fcdd28c94bca2eabe96a082a984fa3bedd675aa6f672bdc88db42804586c282"
+    },
+    {
+      "name": "Exo - Trial 4h",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Trial 4h.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Trial 4h.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 32,
+      "chartType": "Delta Cluster",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": false,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "4e734fe0a5546d500c92084211b49958acfb4664dc68e7ca4aca5fc76c41cb63"
+    },
+    {
+      "name": "Exo - VolFx-PF",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - VolFx-PF.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - VolFx-PF.json",
+      "runningSheet": "bybit_BTCUSD",
+      "activePeriodId": 1000,
+      "chartType": "Delta Cluster",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        56,
+        90
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "4ef207bd5a236458159975d87b8091f53c4b8f7c7472ed77c3836042cb6ad7bb"
+    },
+    {
+      "name": "Exo - Weekly VP Overview",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - Weekly VP Overview.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - Weekly VP Overview.json",
+      "runningSheet": "bybit_BTCUSD",
+      "activePeriodId": 47,
+      "chartType": "Volume Profile",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        55
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "d7ed1b989e1ce0dd89775c5764e94c8888fd1808d66f8ed18bc04b45c6130166"
+    },
+    {
+      "name": "Exo - White PNF 300",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - White PNF 300.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - White PNF 300.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 30,
+      "chartType": "Delta Profile",
+      "textType": "Imbalance",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": false,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "4c45d9cb2b81c8c298ce5d272e44283d0c18da93722e8937e388659ce214e102"
+    },
+    {
+      "name": "Exo - White Stingray 2",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - White Stingray 2.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - White Stingray 2.json",
+      "runningSheet": "binancefutures_BTCUSDT",
+      "activePeriodId": 16,
+      "chartType": "TPO Mono Color",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        57,
+        56,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        57,
+        56
+      ],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "ee6fe4007ea58f41d675ba24870c9f0d8cd4d740a3dc9cfe5e959ccaeeaa06e0"
+    },
+    {
+      "name": "Exo - White Stingray",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - White Stingray.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - White Stingray.json",
+      "runningSheet": "binancefutures_BTCUSDT",
+      "activePeriodId": 15,
+      "chartType": "TPO Mono Color",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        57,
+        56,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        57,
+        56
+      ],
+      "isTPO": true,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "8969969cc6f5822bd3379da6d7643a3af740d9169b95da15bace3dd56ea2834f"
+    },
+    {
+      "name": "Exo - m/w/d levels",
+      "origin": "collection-2021",
+      "sourceFile": "Exo - m_w_d levels.txt",
+      "decodedFile": "/root/skyterminal/imports/exocharts/decoded/Exo - m_w_d levels.json",
+      "runningSheet": "bitmex_XBTUSD",
+      "activePeriodId": 36,
+      "chartType": "Void",
+      "textType": "None",
+      "sortedIndicators": [
+        55,
+        56,
+        57,
+        91,
+        90
+      ],
+      "visibleIndicators": [
+        57
+      ],
+      "isTPO": false,
+      "showTPOVolumeProfile": true,
+      "showOIDelta": true,
+      "trsDeltaMode": true,
+      "showLiquidations": null,
+      "showOpenInterest": null,
+      "sha256": "ab56ab00d67013ba248ed60f1a4aa3d1489f0bdeecbffd6d4b4fd17f8eea1ee9"
+    }
+  ],
+  "workspaces": [
+    {
+      "name": "btc bad/good hands",
+      "id": "btc-bad-good-hands",
+      "file": "/root/skyterminal/imports/exocharts/workspaces/btc-bad-good-hands.json",
+      "paneCount": 1,
+      "panes": [
+        {
+          "id": "chart",
+          "name": "",
+          "type": "chart",
+          "marketCount": 108
+        }
+      ],
+      "marketReferences": 108,
+      "uniqueMarkets": 108,
+      "indicatorNames": [
+        "Price",
+        "CVD SPOT",
+        "CVD PERP"
+      ],
+      "exchanges": [
+        "BINANCE",
+        "BINANCE_FUTURES",
+        "BITFINEX",
+        "BITGET",
+        "BITMEX",
+        "BITSTAMP",
+        "BITUNIX",
+        "BYBIT",
+        "COINBASE",
+        "DERIBIT",
+        "DYDX",
+        "HUOBI",
+        "HYPERLIQUID",
+        "KRAKEN",
+        "KUCOIN",
+        "OKEX",
+        "POLONIEX",
+        "WHITEBIT"
+      ]
+    },
+    {
+      "name": "alts liquidation farming",
+      "id": "alts-liquidation-farming",
+      "file": "/root/skyterminal/imports/exocharts/workspaces/alts-liquidation-farming.json",
+      "paneCount": 5,
+      "panes": [
+        {
+          "id": "trades",
+          "name": "L1",
+          "type": "trades",
+          "marketCount": 157
+        },
+        {
+          "id": "trades copy 1",
+          "name": "DEFI",
+          "type": "trades",
+          "marketCount": 130
+        },
+        {
+          "id": "trades copy 2",
+          "name": "DIno",
+          "type": "trades",
+          "marketCount": 98
+        },
+        {
+          "id": "trades copy 3",
+          "name": "Trash",
+          "type": "trades",
+          "marketCount": 212
+        },
+        {
+          "id": "trades copy 4",
+          "name": "DEX",
+          "type": "trades",
+          "marketCount": 17
+        }
+      ],
+      "marketReferences": 614,
+      "uniqueMarkets": 614,
+      "indicatorNames": [],
+      "exchanges": [
+        "BINANCE",
+        "BITFINEX",
+        "BYBIT",
+        "COINBASE",
+        "KRAKEN",
+        "OKEX"
+      ]
+    }
+  ]
+}
