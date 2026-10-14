@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070a0c">
+  <title>Skyterminal — Market Intelligence</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="scanline" aria-hidden="true"></div>
+  <header class="topbar">
+    <div class="brand" aria-label="Skyterminal">
+      <span class="brand-mark">SKY/</span><span class="brand-name">TERMINAL</span>
+      <span class="build">0.1.0</span>
+    </div>
+    <div class="session-strip">
+      <span class="live-dot" id="liveDot"></span>
+      <span id="connectionLabel">CONNECTING</span>
+      <span class="divider">/</span>
+      <span>HYPERLIQUID</span>
+      <span class="divider">/</span>
+      <span id="clock">--:--:-- UTC</span>
+    </div>
+    <button class="command-trigger" id="commandTrigger" type="button"><kbd>⌘K</kbd> COMMAND</button>
+  </header>
+
+  <nav class="market-nav" aria-label="Market selection">
+    <div class="asset-tabs" id="assetTabs"></div>
+    <div class="timeframe-tabs" id="timeframeTabs"></div>
+  </nav>
+
+  <main class="terminal-grid">
+    <section class="panel market-panel">
+      <header class="panel-head">
+        <div>
+          <span class="eyebrow">PERPETUAL / USD</span>
+          <div class="instrument-line">
+            <h1 id="instrument">BTC</h1>
+            <span class="price" id="price">—</span>
+            <span class="change" id="change">—</span>
+          </div>
+        </div>
+        <div class="market-meta">
+          <span id="asOf">NO DATA</span>
+          <span id="qualityBadge" class="quality pending">PENDING</span>
+        </div>
+      </header>
+      <div class="chart-wrap">
+        <canvas id="priceChart" aria-label="Price chart"></canvas>
+        <div class="chart-corner top-left">PRICE / VOLUME / Δ PROXY</div>
+        <div class="chart-corner bottom-right" id="chartRange">—</div>
+      </div>
+    </section>
+
+    <aside class="panel regime-panel">
+      <header class="panel-head compact"><span class="eyebrow">MARKET STATE</span><span id="regimeCode">—</span></header>
+      <div class="regime-core">
+        <div class="regime-orbit" id="regimeOrbit"><span id="regimeValue">—</span><small>VOL PCTL</small></div>
+        <div>
+          <strong id="regimeLabel">AWAITING DATA</strong>
+          <p id="regimeDescription">Regime is descriptive, not a directional signal.</p>
+        </div>
+      </div>
+      <div class="metric-list" id="regimeMetrics"></div>
+    </aside>
+
+    <section class="panel timeframe-panel">
+      <header class="panel-head compact"><span class="eyebrow">MULTI-TIMEFRAME VECTOR</span><span id="matrixStatus">SYNCING</span></header>
+      <div class="timeframe-matrix" id="timeframeMatrix"></div>
+    </section>
+
+    <section class="panel flow-panel">
+      <header class="panel-head compact"><span class="eyebrow">ORDER FLOW</span><span>CANDLE-SIGNED VOLUME</span></header>
+      <div class="mini-chart"><canvas id="deltaChart" aria-label="Cumulative delta proxy"></canvas></div>
+      <div class="flow-footer">
+        <span>Δ METHOD <b>PROXY</b></span>
+        <span>BOOK IMBALANCE <b id="imbalance">—</b></span>
+        <span>SPREAD <b id="spread">—</b></span>
+      </div>
+    </section>
+
+    <aside class="panel risk-panel">
+      <header class="panel-head compact"><span class="eyebrow">RISK ENGINE</span><span>HISTORICAL / 95%</span></header>
+      <div class="risk-stack" id="riskStack"></div>
+      <p class="method-note">Loss metrics use observed returns. Tail confidence is limited when history is short.</p>
+    </aside>
+
+    <section class="panel universe-panel">
+      <header class="panel-head compact"><span class="eyebrow">LAUNCH UNIVERSE</span><span>LIVE MIDS</span></header>
+      <div class="universe-grid" id="universeGrid"></div>
+    </section>
+
+    <section class="panel doctrine-panel">
+      <header class="panel-head compact"><span class="eyebrow">SIGNAL DOCTRINE</span><span>BOOK-DERIVED</span></header>
+      <div class="doctrine-grid">
+        <article><span>01</span><strong>REGIME BEFORE DIRECTION</strong><p>Size and interpretation change with volatility state.</p></article>
+        <article><span>02</span><strong>FLOW NEEDS PRICE RESPONSE</strong><p>Aggression without displacement can signal absorption.</p></article>
+        <article><span>03</span><strong>TAILS ARE NOT GAUSSIAN</strong><p>VaR is paired with Expected Shortfall and drawdown.</p></article>
+        <article><span>04</span><strong>TIMEFRAMES MAY DISAGREE</strong><p>Conflict is information, not an error to average away.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span id="statusMessage">BOOTING SKYTERMINAL…</span>
+    <span>REFRESH <b>5S</b></span>
+    <span>DATA <b>PUBLIC</b></span>
+    <span>EXECUTION <b>OFF</b></span>
+  </footer>
+
+  <dialog class="command-dialog" id="commandDialog">
+    <form method="dialog">
+      <div class="command-input-row"><span>&gt;</span><input id="commandInput" autocomplete="off" placeholder="asset btc · timeframe 1h · refresh"></div>
+      <div class="command-help">
+        <button value="cancel" data-command="asset BTC">BTC</button>
+        <button value="cancel" data-command="asset ETH">ETH</button>
+        <button value="cancel" data-command="asset SOL">SOL</button>
+        <button value="cancel" data-command="asset HYPE">HYPE</button>
+        <button value="cancel" data-command="timeframe 5m">5M</button>
+        <button value="cancel" data-command="timeframe 1h">1H</button>
+        <button value="cancel" data-command="timeframe 4h">4H</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
