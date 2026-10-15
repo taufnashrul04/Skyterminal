@@ -14,7 +14,7 @@ Original web-based market intelligence terminal. **Market Intel** intentionally 
 - Candle-direction cumulative-volume proxy (explicitly labelled as a proxy)
 - Keyboard command bar (`Ctrl/Cmd+K` or `/`)
 - Responsive desktop/mobile monitor layout
-- Funding-arbitrage tracker across the full connected market universe, with pair/venue filtering, hourly-normalized rates, long/short venue routing, gross annualized spread, price-gap checks, and cost-aware break-even
+- Funding-arbitrage tracker across the full connected market universe, with pair search, two-venue route selectors, hourly-normalized rates, long/short venue routing, gross annualized spread, price-gap checks, and cost-aware break-even
 - Live funding adapters for Hyperliquid, Variational, RISEx, Nado, TxFlow, Arcus, and PopDEX; optional Decibel via `DECIBEL_BEARER`
 - TxFlow, Arcus, and PopDEX rates come from ProFunding's open market-data endpoint (no API key); price/basis is explicitly shown as unavailable rather than fabricated
 - Partial-source resilience: one unavailable venue does not take down the tracker

@@ -184,13 +184,55 @@ async function loadMatrix() {
   renderMatrix(); $('#matrixStatus').textContent = `${Object.keys(state.matrix).length}/5 ONLINE`;
 }
 
+function opportunityRow(item) {
+  return `<tr>
+    <td><strong>${esc(item.pair)}</strong></td>
+    <td><span class="venue">${esc(item.longDex)}</span><small>${pct(item.longRate1h, 4)} / 1H</small></td>
+    <td><span class="venue">${esc(item.shortDex)}</span><small>${pct(item.shortRate1h, 4)} / 1H</small></td>
+    <td class="positive">${pct(item.grossRate1h, 4)}</td>
+    <td><strong>${item.grossAnnualizedPct.toFixed(1)}%</strong></td>
+    <td>${compactUSD(item.estimatedDailyPer1000)}</td>
+    <td>${item.breakEvenHours.toFixed(1)}H</td>
+    <td class="${item.priceDivergenceBps != null && item.priceDivergenceBps > 100 ? 'negative' : ''}">${item.priceDivergenceBps == null ? (item.priceRisk === 'ORACLE_PRICE_ONLY' ? 'ORACLE ONLY' : 'PRICE N/A') : `${item.priceDivergenceBps.toFixed(1)} BPS`}</td>
+    <td><span class="grade ${esc(item.confidence)}">${esc(item.confidence).toUpperCase()}</span></td>
+  </tr>`;
+}
+
+function populateArbVenues(markets) {
+  const venues = [...new Set(markets.map((market) => market.dex))].sort();
+  for (const [selector, placeholder] of [['#arbVenueA', 'ANY VENUE A'], ['#arbVenueB', 'ANY VENUE B']]) {
+    const select = $(selector);
+    const current = select.value;
+    select.innerHTML = `<option value="">${placeholder}</option>${venues.map((venue) => `<option value="${esc(venue)}">${esc(venue)}</option>`).join('')}`;
+    if (venues.includes(current)) select.value = current;
+  }
+}
+
+function renderOpportunityRoutes() {
+  if (!state.funding) return;
+  const pairQuery = $('#arbPairSearch').value.trim().toUpperCase();
+  const venueA = $('#arbVenueA').value;
+  const venueB = $('#arbVenueB').value;
+  const routes = (state.funding.routes ?? state.funding.opportunities ?? []).filter((route) => {
+    if (pairQuery && !route.pair.toUpperCase().includes(pairQuery)) return false;
+    const venues = [route.longDex, route.shortDex];
+    if (venueA && !venues.includes(venueA)) return false;
+    if (venueB && !venues.includes(venueB)) return false;
+    if (venueA && venueB && venueA === venueB) return false;
+    return true;
+  });
+  $('#arbCount').textContent = `${routes.length} ROUTES`;
+  $('#opportunityRows').innerHTML = routes.length
+    ? routes.map(opportunityRow).join('')
+    : '<tr><td colspan="9" class="empty-cell">NO ROUTE MATCHES THE SELECTED VENUES / PAIR</td></tr>';
+}
+
 function renderFunding(data) {
   state.funding = data;
   const opportunities = data.opportunities ?? [];
   const markets = data.markets ?? [];
   const online = Object.values(data.sources ?? {}).filter((source) => source.status === 'online').length;
   const best = opportunities[0];
-  $('#arbCount').textContent = `${opportunities.length} SETUPS`;
   $('#fundingAsOf').textContent = new Date(data.asOf).toLocaleString(undefined, { hour12: false });
   $('#fundingQuality').textContent = `${online}/${Object.keys(data.sources ?? {}).length} VENUES`;
   $('#fundingQuality').className = `quality ${online >= 2 ? 'good' : 'bad'}`;
@@ -201,17 +243,8 @@ function renderFunding(data) {
     ['LIVE MARKETS', String(markets.length), `${online} SOURCES ONLINE`],
   ].map(([label, value, detail]) => `<article><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join('');
   $('#sourceGrid').innerHTML = Object.entries(data.sources ?? {}).map(([name, source]) => `<div class="source-card ${source.status}"><span class="source-led"></span><div><strong>${esc(name)}</strong><small>${esc(source.status).toUpperCase()} · ${Number(source.markets ?? 0)} MARKETS</small></div></div>`).join('');
-  $('#opportunityRows').innerHTML = opportunities.length ? opportunities.map((item) => `<tr>
-    <td><strong>${esc(item.pair)}</strong></td>
-    <td><span class="venue">${esc(item.longDex)}</span><small>${pct(item.longRate1h, 4)} / 1H</small></td>
-    <td><span class="venue">${esc(item.shortDex)}</span><small>${pct(item.shortRate1h, 4)} / 1H</small></td>
-    <td class="positive">${pct(item.grossRate1h, 4)}</td>
-    <td><strong>${item.grossAnnualizedPct.toFixed(1)}%</strong></td>
-    <td>${compactUSD(item.estimatedDailyPer1000)}</td>
-    <td>${item.breakEvenHours.toFixed(1)}H</td>
-    <td class="${item.priceDivergenceBps != null && item.priceDivergenceBps > 100 ? 'negative' : ''}">${item.priceDivergenceBps == null ? (item.priceRisk === 'ORACLE_PRICE_ONLY' ? 'ORACLE ONLY' : 'PRICE N/A') : `${item.priceDivergenceBps.toFixed(1)} BPS`}</td>
-    <td><span class="grade ${esc(item.confidence)}">${esc(item.confidence).toUpperCase()}</span></td>
-  </tr>`).join('') : '<tr><td colspan="9" class="empty-cell">NO POSITIVE CROSS-VENUE SPREAD IN FOCUS UNIVERSE</td></tr>';
+  populateArbVenues(markets);
+  renderOpportunityRoutes();
   $('#fundingRows').innerHTML = markets.map((item) => {
     const annualized = item.fundingRate1h * 24 * 365 * 100;
     return `<tr><td><strong>${esc(item.ticker)}</strong></td><td>${esc(item.dex)}</td><td>${item.markPrice == null ? 'N/A' : `$${fmtPrice(item.markPrice)}`}</td><td class="${item.fundingRate1h >= 0 ? 'positive' : 'negative'}">${pct(item.fundingRate1h, 4)}</td><td>${annualized >= 0 ? '+' : ''}${annualized.toFixed(1)}%</td><td>${item.volume24h > 0 ? compactUSD(item.volume24h) : 'N/A'}</td></tr>`;
@@ -226,7 +259,7 @@ async function loadFunding() {
     const data = await getJSON('/api/funding');
     if (generation !== fundingGeneration || state.mode !== 'funding') return;
     renderFunding(data);
-    setStatus(`FUNDING TRACKER · ${data.opportunities.length} SETUPS`, 'live');
+    setStatus(`FUNDING TRACKER · ${(data.routes ?? data.opportunities).length} ROUTES`, 'live');
   } catch (error) {
     if (generation === fundingGeneration && state.mode === 'funding') {
       $('#fundingQuality').textContent = 'DEGRADED';
@@ -264,6 +297,15 @@ function setupCommands() {
   document.querySelectorAll('[data-command]').forEach((button) => button.addEventListener('click', () => runCommand(button.dataset.command)));
   document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => selectMode(button.dataset.mode)));
   $('#fundingFilter').addEventListener('input', filterFundingRows);
+  $('#arbPairSearch').addEventListener('input', renderOpportunityRoutes);
+  $('#arbVenueA').addEventListener('change', renderOpportunityRoutes);
+  $('#arbVenueB').addEventListener('change', renderOpportunityRoutes);
+  $('#arbReset').addEventListener('click', () => {
+    $('#arbPairSearch').value = '';
+    $('#arbVenueA').value = '';
+    $('#arbVenueB').value = '';
+    renderOpportunityRoutes();
+  });
 }
 
 function tickClock() { $('#clock').textContent = `${new Date().toISOString().slice(11, 19)} UTC`; }

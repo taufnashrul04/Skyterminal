@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeTicker, findFundingArbitrage, buildFundingSnapshot, extractProFundingVenueMarkets } from '../lib/funding.js';
+import { normalizeTicker, findFundingArbitrage, findFundingRoutes, buildFundingSnapshot, extractProFundingVenueMarkets } from '../lib/funding.js';
 
 test('normalizeTicker aligns common perpetual symbols', () => {
   assert.equal(normalizeTicker('BTC/USDC'), 'BTC');
@@ -20,6 +20,19 @@ test('extractProFundingVenueMarkets derives hourly rates without inventing price
   assert.equal(markets[0].priceType, 'unavailable');
   assert.ok(Math.abs(markets[0].fundingRate1h - (-8.76 / 100 / 8_760)) < 1e-12);
   assert.equal(markets[0].volume24h, 2_000_000);
+});
+
+test('findFundingRoutes returns every positive cross-venue combination', () => {
+  const routes = findFundingRoutes([
+    { dex: 'Variational', ticker: 'ETH', markPrice: 100, priceType: 'mark', fundingRate1h: -0.0001, volume24h: 3_000_000 },
+    { dex: 'TxFlow', ticker: 'ETH', markPrice: null, priceType: 'unavailable', fundingRate1h: 0, volume24h: 2_000_000 },
+    { dex: 'Arcus', ticker: 'ETH', markPrice: null, priceType: 'unavailable', fundingRate1h: 0.0002, volume24h: 1_000_000 },
+  ]);
+  assert.equal(routes.length, 3);
+  assert.deepEqual(routes.map((route) => `${route.longDex}->${route.shortDex}`), [
+    'Variational->Arcus', 'TxFlow->Arcus', 'Variational->TxFlow',
+  ]);
+  assert.ok(routes.every((route) => route.pair === 'ETH' && route.grossRate1h > 0));
 });
 
 test('findFundingArbitrage selects low-rate long and high-rate short', () => {
@@ -76,6 +89,7 @@ test('buildFundingSnapshot keeps every market when no funding filter is provided
   assert.deepEqual(snapshot.focusAssets, ['ALL']);
   assert.equal(snapshot.markets.length, 3);
   assert.equal(snapshot.opportunities[0].pair, 'DOGE');
+  assert.equal(snapshot.routes.length, 1);
 });
 
 test('buildFundingSnapshot reports source health and focus assets', async () => {
