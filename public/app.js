@@ -216,6 +216,7 @@ function renderFunding(data) {
     const annualized = item.fundingRate1h * 24 * 365 * 100;
     return `<tr><td><strong>${esc(item.ticker)}</strong></td><td>${esc(item.dex)}</td><td>${item.markPrice == null ? 'N/A' : `$${fmtPrice(item.markPrice)}`}</td><td class="${item.fundingRate1h >= 0 ? 'positive' : 'negative'}">${pct(item.fundingRate1h, 4)}</td><td>${annualized >= 0 ? '+' : ''}${annualized.toFixed(1)}%</td><td>${item.volume24h > 0 ? compactUSD(item.volume24h) : 'N/A'}</td></tr>`;
   }).join('') || '<tr><td colspan="6" class="empty-cell">NO FUNDING DATA AVAILABLE</td></tr>';
+  filterFundingRows();
 }
 
 async function loadFunding() {
@@ -247,6 +248,13 @@ function runCommand(raw) {
   else if (cmd === 'refresh') state.mode === 'funding' ? loadFunding() : loadAll();
 }
 
+function filterFundingRows() {
+  const query = $('#fundingFilter').value.trim().toUpperCase();
+  document.querySelectorAll('#fundingRows tr').forEach((row) => {
+    row.hidden = Boolean(query) && !row.textContent.toUpperCase().includes(query);
+  });
+}
+
 function setupCommands() {
   const dialog = $('#commandDialog'), input = $('#commandInput');
   const open = () => { dialog.showModal(); setTimeout(() => input.focus(), 0); };
@@ -255,6 +263,7 @@ function setupCommands() {
   input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); runCommand(input.value); input.value = ''; dialog.close(); } });
   document.querySelectorAll('[data-command]').forEach((button) => button.addEventListener('click', () => runCommand(button.dataset.command)));
   document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => selectMode(button.dataset.mode)));
+  $('#fundingFilter').addEventListener('input', filterFundingRows);
 }
 
 function tickClock() { $('#clock').textContent = `${new Date().toISOString().slice(11, 19)} UTC`; }

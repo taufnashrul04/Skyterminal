@@ -1,6 +1,6 @@
 # Skyterminal
 
-Original web-based market intelligence terminal for **BTC, ETH, SOL, and HYPE**.
+Original web-based market intelligence terminal. **Market Intel** intentionally starts with **BTC, ETH, SOL, and HYPE**, while **Funding Arbitrage** scans every market returned by the connected venues.
 
 ## What is live
 
@@ -14,7 +14,7 @@ Original web-based market intelligence terminal for **BTC, ETH, SOL, and HYPE**.
 - Candle-direction cumulative-volume proxy (explicitly labelled as a proxy)
 - Keyboard command bar (`Ctrl/Cmd+K` or `/`)
 - Responsive desktop/mobile monitor layout
-- Funding-arbitrage tracker with hourly-normalized rates, long/short venue routing, gross annualized spread, price-gap checks, and cost-aware break-even
+- Funding-arbitrage tracker across the full connected market universe, with pair/venue filtering, hourly-normalized rates, long/short venue routing, gross annualized spread, price-gap checks, and cost-aware break-even
 - Live funding adapters for Hyperliquid, Variational, RISEx, Nado, TxFlow, Arcus, and PopDEX; optional Decibel via `DECIBEL_BEARER`
 - TxFlow, Arcus, and PopDEX rates come from ProFunding's open market-data endpoint (no API key); price/basis is explicitly shown as unavailable rather than fabricated
 - Partial-source resilience: one unavailable venue does not take down the tracker
@@ -36,6 +36,17 @@ HOST=127.0.0.1 PORT=4173 npm start
 # Behind a trusted reverse proxy only:
 TRUST_PROXY=1 HOST=127.0.0.1 PORT=4173 npm start
 ```
+
+## Deploy to Vercel
+
+The repository includes Vercel Functions under `api/` and static rewrites in `vercel.json`.
+
+```bash
+npx vercel
+npx vercel --prod
+```
+
+Set `DECIBEL_BEARER` in Vercel only if the optional authenticated Decibel feed is required.
 
 ## Test
 

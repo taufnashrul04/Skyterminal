@@ -64,6 +64,20 @@ test('findFundingArbitrage drops malformed and non-overlapping markets', () => {
   assert.deepEqual(opportunities, []);
 });
 
+test('buildFundingSnapshot keeps every market when no funding filter is provided', async () => {
+  const sources = {
+    Alpha: async () => [
+      { dex: 'Alpha', ticker: 'BTC', markPrice: 100, fundingRate1h: 0.0001, volume24h: 1_000_000 },
+      { dex: 'Alpha', ticker: 'DOGE', markPrice: 0.2, fundingRate1h: -0.0001, volume24h: 2_000_000 },
+    ],
+    Beta: async () => [{ dex: 'Beta', ticker: 'DOGE', markPrice: 0.2, fundingRate1h: 0.0002, volume24h: 2_000_000 }],
+  };
+  const snapshot = await buildFundingSnapshot({ sources });
+  assert.deepEqual(snapshot.focusAssets, ['ALL']);
+  assert.equal(snapshot.markets.length, 3);
+  assert.equal(snapshot.opportunities[0].pair, 'DOGE');
+});
+
 test('buildFundingSnapshot reports source health and focus assets', async () => {
   const sources = {
     Alpha: async () => [{ dex: 'Alpha', ticker: 'BTC', markPrice: 100, fundingRate1h: -0.0001, volume24h: 1_000_000 }],
