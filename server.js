@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { fetchAllMids, fetchMarketData } from './lib/hyperliquid.js';
 import { buildMarketSnapshot } from './lib/indicators.js';
 import { buildFundingSnapshot } from './lib/funding.js';
+import { fetchCollectorSummary } from './lib/collector.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PUBLIC = path.join(ROOT, 'public');
@@ -80,10 +81,11 @@ async function serveStatic(response, pathname, publicDir) {
   }
 }
 
-export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader = fetchAllMids, fundingLoader = buildFundingSnapshot, publicDir = DEFAULT_PUBLIC, maxInFlight = 24, requestsPerMinute = 120 } = {}) {
+export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader = fetchAllMids, fundingLoader = buildFundingSnapshot, collectorLoader = fetchCollectorSummary, publicDir = DEFAULT_PUBLIC, maxInFlight = 24, requestsPerMinute = 120 } = {}) {
   const getMarket = cached(marketLoader, 4_000);
   const getMids = cached(midsLoader, 2_000);
   const getFunding = cached(fundingLoader, 30_000);
+  const getCollector = cached(collectorLoader, 2_000);
   const clients = new Map();
   let inFlight = 0;
   return http.createServer(async (request, response) => {
@@ -115,6 +117,10 @@ export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader
       }
       if (url.pathname === '/api/funding') {
         return sendJson(response, 200, await getFunding());
+      }
+      if (url.pathname === '/api/collector') {
+        const asset = String(url.searchParams.get('asset') ?? 'BTC').toUpperCase();
+        return sendJson(response, 200, await getCollector(asset));
       }
       if (url.pathname === '/api/market') {
         const coin = String(url.searchParams.get('coin') ?? 'BTC').toUpperCase();

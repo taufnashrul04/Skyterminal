@@ -2,7 +2,7 @@ import { normalizePanelState, setPanelCollapsed } from './panel-state.js';
 
 const ASSETS = ['BTC', 'ETH', 'SOL', 'HYPE'];
 const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
-const state = { mode: 'market', asset: 'BTC', timeframe: '5m', market: null, funding: null, mids: {}, matrix: {}, busy: false };
+const state = { mode: 'market', asset: 'BTC', timeframe: '5m', market: null, collector: null, funding: null, mids: {}, matrix: {}, busy: false };
 let marketGeneration = 0;
 let matrixGeneration = 0;
 let fundingGeneration = 0;
@@ -176,6 +176,20 @@ function renderExo(data) {
   $('#exoMetrics').innerHTML = cards.map(([label, value, detail, cls]) => `<article class="exo-card ${cls}"><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join('');
 }
 
+function renderCollectorSummary(summary) {
+  state.collector = summary;
+  if (!state.market) return;
+  const existing = [...document.querySelectorAll('#exoMetrics .collector-card')];
+  existing.forEach((node) => node.remove());
+  const health = summary?.available ? summary.health?.data : null;
+  const rows = summary?.available ? [
+    ['COLLECTOR CVD', summary.analytics?.cvd?.buckets?.at(-1)?.close ?? 'N/A', '15M SESSION WINDOW', 'collector-card'],
+    ['TRUE PROFILE POC', summary.analytics?.profile?.poc ?? 'N/A', 'TRADE-AT-PRICE', 'collector-card'],
+    ['COLLECTOR STATUS', health?.status?.toUpperCase() ?? 'ONLINE', `${health?.counts?.trades ?? 0} TRADES STORED`, 'collector-card'],
+  ] : [['COLLECTOR STATUS', 'OFFLINE', summary?.error ? 'LOCAL COLLECTOR UNAVAILABLE' : 'WAITING FOR DATA', 'collector-card proxy']];
+  $('#exoMetrics').insertAdjacentHTML('beforeend', rows.map(([label, value, detail, cls]) => `<article class="exo-card ${cls}"><span>${label}</span><strong>${esc(value)}</strong><small>${esc(detail)}</small></article>`).join(''));
+}
+
 function resizeCanvas(canvas) {
   const rect = canvas.getBoundingClientRect();
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -234,6 +248,7 @@ async function loadMarket() {
     renderMarket(data);
     state.matrix[timeframe] = data;
     renderMatrix();
+    getJSON(`/api/collector?asset=${asset}`).then(renderCollectorSummary).catch(() => renderCollectorSummary({ available: false, error: 'collector request failed' }));
     setStatus(`${asset} ${timeframe.toUpperCase()} UPDATED`, 'live');
   } catch (error) {
     if (generation === marketGeneration && state.mode === 'market') setStatus(error.message, 'error');
