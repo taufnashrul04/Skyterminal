@@ -46,7 +46,12 @@ button { color: inherit; }
 .command-trigger { justify-self: end; border: 1px solid var(--line); background: var(--surface); padding: 7px 10px; cursor: pointer; }
 kbd { color: var(--signal); font: inherit; }
 .market-nav { min-height: 43px; display: flex; justify-content: space-between; align-items: stretch; border-bottom: 1px solid var(--line); background: #090d10; padding: 0 12px; }
-.asset-tabs, .timeframe-tabs { display: flex; align-items: stretch; }
+.asset-tabs, .timeframe-tabs, .mode-tabs { display: flex; align-items: stretch; }
+.mode-tabs { margin-right: auto; border-left: 1px solid var(--line); }
+.mode-tab { border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--muted); padding: 0 16px; cursor: pointer; font-size: 10px; letter-spacing: .08em; position: relative; }
+.mode-tab:hover { color: var(--ink); background: var(--surface); }
+.mode-tab.active { color: var(--signal); background: var(--surface-2); }
+.mode-tab.active::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; background: var(--signal); }
 .tab { min-width: 62px; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; padding: 0 14px; position: relative; }
 .tab:first-child { border-left: 1px solid var(--line); }
 .tab:hover { color: var(--ink); background: var(--surface); }
@@ -98,17 +103,46 @@ canvas { display: block; width: 100%; height: 100%; }
 .method-note { color: var(--muted); font-size: 9px; line-height: 1.5; margin: 9px 12px; }
 .universe-grid { display: grid; grid-template-columns: repeat(4,1fr); }.universe-card { border-right: 1px solid var(--line); padding: 14px; cursor: pointer; }.universe-card:last-child { border-right: 0; }.universe-card:hover, .universe-card.active { background: var(--surface-2); }.universe-card.active { box-shadow: inset 0 -2px var(--signal); }.universe-card header { display: flex; justify-content: space-between; color: var(--muted); }.universe-card strong { display: block; font: 700 20px var(--sans); margin-top: 10px; }.universe-card small { color: var(--muted); }
 .doctrine-grid { display: grid; grid-template-columns: repeat(4,1fr); }.doctrine-grid article { min-height: 112px; padding: 14px; border-right: 1px solid var(--line); }.doctrine-grid article:last-child { border-right: 0; }.doctrine-grid article > span { color: var(--signal); }.doctrine-grid strong { display: block; margin-top: 12px; font: 700 13px var(--sans); }.doctrine-grid p { color: var(--muted); line-height: 1.45; margin-bottom: 0; }
+[hidden] { display: none !important; }
+.funding-dashboard { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); grid-template-areas: "hero sources" "opportunities opportunities" "rates rates" "doctrine doctrine"; gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
+.funding-hero { grid-area: hero; }.funding-sources { grid-area: sources; }.opportunity-panel { grid-area: opportunities; }.rate-panel { grid-area: rates; }.arb-doctrine { grid-area: doctrine; }
+.arb-count { color: var(--signal); border: 1px solid color-mix(in srgb, var(--signal) 45%, var(--line)); padding: 3px 6px; font-size: 9px; letter-spacing: .08em; }
+.funding-summary { display: grid; grid-template-columns: repeat(4,1fr); }
+.funding-summary article { min-height: 104px; padding: 16px; border-right: 1px solid var(--line); }
+.funding-summary article:last-child { border-right: 0; }
+.funding-summary span, .funding-summary small { display: block; color: var(--muted); font-size: 9px; letter-spacing: .07em; }
+.funding-summary strong { display: block; margin: 13px 0 8px; font: 800 20px var(--sans); color: var(--ink); }
+.source-grid { display: grid; grid-template-columns: repeat(2,1fr); padding: 8px; gap: 1px; background: var(--line); }
+.source-card { min-height: 58px; background: var(--surface); padding: 11px; display: flex; align-items: center; gap: 10px; }
+.source-card strong, .source-card small { display: block; }.source-card small { color: var(--muted); margin-top: 4px; font-size: 8px; }
+.source-led { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 8px currentColor; }
+.source-card.online .source-led { background: var(--positive); }.source-card.empty .source-led { background: var(--amber); }
+.table-scroll { overflow-x: auto; }
+.arb-table { width: 100%; border-collapse: collapse; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.arb-table th { padding: 9px 12px; text-align: left; color: var(--muted); font-size: 8px; font-weight: 500; letter-spacing: .08em; border-bottom: 1px solid var(--line); background: #091015; }
+.arb-table td { padding: 12px; border-bottom: 1px solid var(--line); color: var(--ink); }
+.arb-table tbody tr:hover { background: var(--surface-2); }
+.arb-table td small { display: block; color: var(--muted); margin-top: 4px; font-size: 8px; }
+.venue { color: var(--ice); }.positive { color: var(--positive) !important; }.negative { color: var(--danger) !important; }
+.grade { padding: 3px 6px; border: 1px solid var(--line-hot); font-size: 8px; }.grade.high { color: var(--positive); border-color: var(--positive); }.grade.medium { color: var(--amber); border-color: var(--amber); }.grade.low { color: var(--muted); }
+.empty-cell { text-align: center; color: var(--muted) !important; padding: 28px !important; }
+.compact-table td { padding-top: 9px; padding-bottom: 9px; }
 .statusbar { min-height: 29px; display: flex; align-items: center; gap: 20px; padding: 0 12px; color: var(--muted); font-size: 9px; position: sticky; bottom: 0; background: #080c0e; border-top: 1px solid var(--line); z-index: 8; }.statusbar span:first-child { margin-right: auto; }.statusbar b { color: var(--ink); font-weight: 500; }
 .command-dialog { width: min(620px, calc(100vw - 24px)); padding: 0; color: var(--ink); background: var(--surface); border: 1px solid var(--line-hot); box-shadow: 0 24px 80px #000; }.command-dialog::backdrop { background: rgba(0,0,0,.72); }.command-input-row { display: flex; gap: 10px; align-items: center; padding: 15px; border-bottom: 1px solid var(--line); color: var(--signal); }.command-input-row input { flex: 1; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 15px; }.command-help { display: flex; flex-wrap: wrap; gap: 7px; padding: 12px; }.command-help button { background: #0c1317; border: 1px solid var(--line); padding: 7px 10px; cursor: pointer; }.command-help button:hover { border-color: var(--signal); }
 .error-panel { color: var(--danger); }
 @media (max-width: 960px) {
   .topbar { grid-template-columns: 1fr auto; }.session-strip { display: none; }
-  .terminal-grid { grid-template-columns: 1fr; grid-template-areas: "market" "regime" "timeframes" "flow" "risk" "universe" "doctrine"; }
+  .terminal-grid, .funding-dashboard { grid-template-columns: 1fr; }
+  .terminal-grid { grid-template-areas: "market" "regime" "timeframes" "flow" "risk" "universe" "doctrine"; }
+  .funding-dashboard { grid-template-areas: "hero" "sources" "opportunities" "rates" "doctrine"; }
+  .funding-summary { grid-template-columns: repeat(2,1fr); }
   .timeframe-matrix, .universe-grid { overflow-x: auto; grid-template-columns: repeat(5, minmax(150px,1fr)); }.universe-grid { grid-template-columns: repeat(4,minmax(160px,1fr)); }
   .doctrine-grid { grid-template-columns: repeat(2,1fr); }.chart-wrap { height: 370px; }
 }
 @media (max-width: 620px) {
-  .topbar { height: 44px; }.brand { font-size: 16px; }.market-nav { padding: 0; overflow-x: auto; }.asset-tabs, .timeframe-tabs { flex: 0 0 auto; }.tab { min-height: 42px; }
+  .topbar { height: 44px; }.brand { font-size: 16px; }.market-nav { padding: 0; overflow-x: auto; }.asset-tabs, .timeframe-tabs, .mode-tabs { flex: 0 0 auto; }.tab, .mode-tab { min-height: 42px; }
+  .funding-summary, .source-grid { grid-template-columns: 1fr; }
+  .funding-summary article { border-right: 0; border-bottom: 1px solid var(--line); }
   .panel-head { min-height: 62px; }.instrument-line { gap: 8px; }.price { font-size: 17px; }.chart-wrap { height: 330px; }
   .doctrine-grid { grid-template-columns: 1fr; }.doctrine-grid article { border-right: 0; border-bottom: 1px solid var(--line); }
   .statusbar span:not(:first-child) { display: none; }.regime-core { grid-template-columns: 92px 1fr; }.regime-orbit { width: 88px; height: 88px; }

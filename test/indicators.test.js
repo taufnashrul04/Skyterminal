@@ -76,3 +76,21 @@ test('buildMarketSnapshot returns the canonical dashboard contract', () => {
   assert.ok(Number.isFinite(result.metrics.trend));
   assert.ok(Array.isArray(result.series.candles));
 });
+
+test('buildMarketSnapshot sorts candles and rejects malformed market data', () => {
+  const dirty = [
+    { t: 3, o: '103', h: '104', l: '102', c: '103', v: '8' },
+    { t: 1, o: '100', h: '101', l: '99', c: '100', v: '5' },
+    { t: 2, o: 'bad', h: '102', l: '98', c: '101', v: 'NaN' },
+    { t: 2, o: '100', h: '99', l: '98', c: '100', v: '5' },
+  ];
+  const result = buildMarketSnapshot({
+    coin: 'BTC', interval: '5m', candles: dirty,
+    book: { levels: [[{ px: '99', sz: '-2' }, { px: '98', sz: '4' }], [{ px: '101', sz: '3' }, { px: 'bad', sz: '4' }]] },
+  });
+  assert.deepEqual(result.series.candles.map((c) => c.t), [1, 3]);
+  assert.ok(Object.values(result.metrics).every(Number.isFinite));
+  assert.equal(result.book.bidDepth, 4);
+  assert.equal(result.book.askDepth, 3);
+  assert.ok(result.quality.flags.includes('MALFORMED_DATA_DROPPED'));
+});

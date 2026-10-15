@@ -12,7 +12,7 @@
   <header class="topbar">
     <div class="brand" aria-label="Skyterminal">
       <span class="brand-mark">SKY/</span><span class="brand-name">TERMINAL</span>
-      <span class="build">0.1.0</span>
+      <span class="build">0.2.0</span>
     </div>
     <div class="session-strip">
       <span class="live-dot" id="liveDot"></span>
@@ -25,12 +25,16 @@
     <button class="command-trigger" id="commandTrigger" type="button"><kbd>⌘K</kbd> COMMAND</button>
   </header>
 
-  <nav class="market-nav" aria-label="Market selection">
+  <nav class="market-nav" aria-label="Terminal mode and market selection">
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="market">MARKET INTEL</button>
+      <button class="mode-tab" data-mode="funding">FUNDING ARB</button>
+    </div>
     <div class="asset-tabs" id="assetTabs"></div>
     <div class="timeframe-tabs" id="timeframeTabs"></div>
   </nav>
 
-  <main class="terminal-grid">
+  <main class="terminal-grid" id="marketDashboard">
     <section class="panel market-panel">
       <header class="panel-head">
         <div>
@@ -98,6 +102,54 @@
         <article><span>02</span><strong>FLOW NEEDS PRICE RESPONSE</strong><p>Aggression without displacement can signal absorption.</p></article>
         <article><span>03</span><strong>TAILS ARE NOT GAUSSIAN</strong><p>VaR is paired with Expected Shortfall and drawdown.</p></article>
         <article><span>04</span><strong>TIMEFRAMES MAY DISAGREE</strong><p>Conflict is information, not an error to average away.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <main class="funding-dashboard" id="fundingDashboard" hidden>
+    <section class="panel funding-hero">
+      <header class="panel-head">
+        <div>
+          <span class="eyebrow">CROSS-DEX PERPETUAL TRACKER</span>
+          <div class="instrument-line"><h1>FUNDING ARBITRAGE</h1><span class="arb-count" id="arbCount">—</span></div>
+        </div>
+        <div class="market-meta"><span id="fundingAsOf">NO DATA</span><span class="quality pending" id="fundingQuality">SYNCING</span></div>
+      </header>
+      <div class="funding-summary" id="fundingSummary"></div>
+    </section>
+
+    <section class="panel funding-sources">
+      <header class="panel-head compact"><span class="eyebrow">VENUE HEALTH</span><span>30S CACHE</span></header>
+      <div class="source-grid" id="sourceGrid"></div>
+    </section>
+
+    <section class="panel opportunity-panel">
+      <header class="panel-head compact"><span class="eyebrow">DELTA-NEUTRAL OPPORTUNITIES</span><span>GROSS FUNDING / COST-AWARE BREAK-EVEN</span></header>
+      <div class="table-scroll">
+        <table class="arb-table">
+          <thead><tr><th>PAIR</th><th>LONG / RECEIVE LOW</th><th>SHORT / RECEIVE HIGH</th><th>SPREAD 1H</th><th>ANNUALIZED</th><th>$/DAY PER $1K</th><th>BREAK-EVEN</th><th>PRICE GAP</th><th>GRADE</th></tr></thead>
+          <tbody id="opportunityRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel rate-panel">
+      <header class="panel-head compact"><span class="eyebrow">FUNDING RATE MATRIX</span><span>HOURLY NORMALIZED</span></header>
+      <div class="table-scroll">
+        <table class="arb-table compact-table">
+          <thead><tr><th>PAIR</th><th>VENUE</th><th>MARK</th><th>RATE / 1H</th><th>ANNUALIZED</th><th>24H VOLUME</th></tr></thead>
+          <tbody id="fundingRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel arb-doctrine">
+      <header class="panel-head compact"><span class="eyebrow">EXECUTION CHECKLIST</span><span>MONITOR ONLY</span></header>
+      <div class="doctrine-grid">
+        <article><span>A</span><strong>VERIFY RATE UNITS</strong><p>Every venue is normalized to decimal funding per hour before comparison.</p></article>
+        <article><span>B</span><strong>PRICE GAP MATTERS</strong><p>Entry basis can overwhelm several funding settlements.</p></article>
+        <article><span>C</span><strong>COSTS SET BREAK-EVEN</strong><p>Dashboard assumes combined round-trip cost shown in the snapshot.</p></article>
+        <article><span>D</span><strong>RATES CAN FLIP</strong><p>Annualized values are snapshots, not locked yields or guaranteed returns.</p></article>
       </div>
     </section>
   </main>

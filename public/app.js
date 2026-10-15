@@ -1,12 +1,17 @@
 const ASSETS = ['BTC', 'ETH', 'SOL', 'HYPE'];
 const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
-const state = { asset: 'BTC', timeframe: '5m', market: null, mids: {}, matrix: {}, busy: false };
+const state = { mode: 'market', asset: 'BTC', timeframe: '5m', market: null, funding: null, mids: {}, matrix: {}, busy: false };
+let marketGeneration = 0;
+let matrixGeneration = 0;
+let fundingGeneration = 0;
 
 const $ = (selector) => document.querySelector(selector);
 const fmtPrice = (value) => Number(value).toLocaleString('en-US', { minimumFractionDigits: Number(value) < 100 ? 2 : 1, maximumFractionDigits: Number(value) < 10 ? 4 : 2 });
 const pct = (value, digits = 2) => `${value >= 0 ? '+' : ''}${(Number(value) * 100).toFixed(digits)}%`;
 const number = (value, digits = 2) => Number(value).toFixed(digits);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+const compactUSD = (value) => Number(value).toLocaleString('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
 
 function setStatus(message, kind = 'live') {
   $('#statusMessage').textContent = message;
@@ -14,8 +19,8 @@ function setStatus(message, kind = 'live') {
   $('#liveDot').className = `live-dot ${kind}`;
 }
 
-async function getJSON(url) {
-  const response = await fetch(url, { cache: 'no-store' });
+async function getJSON(url, options = {}) {
+  const response = await fetch(url, { cache: 'no-store', ...options });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
   return data;
@@ -35,6 +40,21 @@ function selectAsset(asset) {
 function selectTimeframe(timeframe) {
   if (!TIMEFRAMES.includes(timeframe)) return;
   state.timeframe = timeframe; renderTabs(); loadMarket();
+}
+
+function selectMode(mode) {
+  if (!['market', 'funding'].includes(mode)) return;
+  state.mode = mode;
+  marketGeneration += 1;
+  matrixGeneration += 1;
+  fundingGeneration += 1;
+  $('#marketDashboard').hidden = mode !== 'market';
+  $('#fundingDashboard').hidden = mode !== 'funding';
+  $('#assetTabs').hidden = mode !== 'market';
+  $('#timeframeTabs').hidden = mode !== 'market';
+  document.querySelectorAll('[data-mode]').forEach((button) => button.classList.toggle('active', button.dataset.mode === mode));
+  if (mode === 'funding') loadFunding();
+  else loadAll();
 }
 
 function regimeFrom(percentile, trend) {
@@ -133,10 +153,20 @@ function renderUniverse() {
 }
 
 async function loadMarket() {
-  if (state.busy) return; state.busy = true; setStatus(`SYNCING ${state.asset} ${state.timeframe.toUpperCase()}…`, 'pending');
-  try { const data = await getJSON(`/api/market?coin=${state.asset}&interval=${state.timeframe}`); renderMarket(data); state.matrix[state.timeframe] = data; renderMatrix(); setStatus(`${state.asset} ${state.timeframe.toUpperCase()} UPDATED`, 'live'); }
-  catch (error) { setStatus(error.message, 'error'); }
-  finally { state.busy = false; }
+  const generation = ++marketGeneration;
+  const asset = state.asset;
+  const timeframe = state.timeframe;
+  setStatus(`SYNCING ${asset} ${timeframe.toUpperCase()}…`, 'pending');
+  try {
+    const data = await getJSON(`/api/market?coin=${asset}&interval=${timeframe}`);
+    if (generation !== marketGeneration || asset !== state.asset || timeframe !== state.timeframe || state.mode !== 'market') return;
+    renderMarket(data);
+    state.matrix[timeframe] = data;
+    renderMatrix();
+    setStatus(`${asset} ${timeframe.toUpperCase()} UPDATED`, 'live');
+  } catch (error) {
+    if (generation === marketGeneration && state.mode === 'market') setStatus(error.message, 'error');
+  }
 }
 
 async function loadOverview() {
@@ -145,10 +175,64 @@ async function loadOverview() {
 }
 
 async function loadMatrix() {
+  const generation = ++matrixGeneration;
+  const asset = state.asset;
   $('#matrixStatus').textContent = 'SYNCING';
-  const results = await Promise.allSettled(TIMEFRAMES.map(async (tf) => [tf, await getJSON(`/api/market?coin=${state.asset}&interval=${tf}`)]));
+  const results = await Promise.allSettled(TIMEFRAMES.map(async (tf) => [tf, await getJSON(`/api/market?coin=${asset}&interval=${tf}`)]));
+  if (generation !== matrixGeneration || asset !== state.asset) return;
   results.forEach((result) => { if (result.status === 'fulfilled') state.matrix[result.value[0]] = result.value[1]; });
   renderMatrix(); $('#matrixStatus').textContent = `${Object.keys(state.matrix).length}/5 ONLINE`;
+}
+
+function renderFunding(data) {
+  state.funding = data;
+  const opportunities = data.opportunities ?? [];
+  const markets = data.markets ?? [];
+  const online = Object.values(data.sources ?? {}).filter((source) => source.status === 'online').length;
+  const best = opportunities[0];
+  $('#arbCount').textContent = `${opportunities.length} SETUPS`;
+  $('#fundingAsOf').textContent = new Date(data.asOf).toLocaleString(undefined, { hour12: false });
+  $('#fundingQuality').textContent = `${online}/${Object.keys(data.sources ?? {}).length} VENUES`;
+  $('#fundingQuality').className = `quality ${online >= 2 ? 'good' : 'bad'}`;
+  $('#fundingSummary').innerHTML = [
+    ['BEST GROSS APR', best ? `${best.grossAnnualizedPct.toFixed(1)}%` : '—', best?.pair ?? 'NO CROSS-VENUE MATCH'],
+    ['BEST ROUTE', best ? `${esc(best.longDex)} → ${esc(best.shortDex)}` : '—', best ? `LONG ${best.pair} / SHORT ${best.pair}` : 'WAITING FOR DATA'],
+    ['COST ASSUMPTION', `${Number(data.roundTripCostBps ?? 0).toFixed(0)} BPS`, 'COMBINED ROUND-TRIP'],
+    ['LIVE MARKETS', String(markets.length), `${online} SOURCES ONLINE`],
+  ].map(([label, value, detail]) => `<article><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join('');
+  $('#sourceGrid').innerHTML = Object.entries(data.sources ?? {}).map(([name, source]) => `<div class="source-card ${source.status}"><span class="source-led"></span><div><strong>${esc(name)}</strong><small>${esc(source.status).toUpperCase()} · ${Number(source.markets ?? 0)} MARKETS</small></div></div>`).join('');
+  $('#opportunityRows').innerHTML = opportunities.length ? opportunities.map((item) => `<tr>
+    <td><strong>${esc(item.pair)}</strong></td>
+    <td><span class="venue">${esc(item.longDex)}</span><small>${pct(item.longRate1h, 4)} / 1H</small></td>
+    <td><span class="venue">${esc(item.shortDex)}</span><small>${pct(item.shortRate1h, 4)} / 1H</small></td>
+    <td class="positive">${pct(item.grossRate1h, 4)}</td>
+    <td><strong>${item.grossAnnualizedPct.toFixed(1)}%</strong></td>
+    <td>${compactUSD(item.estimatedDailyPer1000)}</td>
+    <td>${item.breakEvenHours.toFixed(1)}H</td>
+    <td class="${item.priceDivergenceBps != null && item.priceDivergenceBps > 100 ? 'negative' : ''}">${item.priceDivergenceBps == null ? 'ORACLE ONLY' : `${item.priceDivergenceBps.toFixed(1)} BPS`}</td>
+    <td><span class="grade ${esc(item.confidence)}">${esc(item.confidence).toUpperCase()}</span></td>
+  </tr>`).join('') : '<tr><td colspan="9" class="empty-cell">NO POSITIVE CROSS-VENUE SPREAD IN FOCUS UNIVERSE</td></tr>';
+  $('#fundingRows').innerHTML = markets.map((item) => {
+    const annualized = item.fundingRate1h * 24 * 365 * 100;
+    return `<tr><td><strong>${esc(item.ticker)}</strong></td><td>${esc(item.dex)}</td><td>$${fmtPrice(item.markPrice)}</td><td class="${item.fundingRate1h >= 0 ? 'positive' : 'negative'}">${pct(item.fundingRate1h, 4)}</td><td>${annualized >= 0 ? '+' : ''}${annualized.toFixed(1)}%</td><td>${item.volume24h > 0 ? compactUSD(item.volume24h) : 'N/A'}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="empty-cell">NO FUNDING DATA AVAILABLE</td></tr>';
+}
+
+async function loadFunding() {
+  const generation = ++fundingGeneration;
+  setStatus('SYNCING FUNDING VENUES…', 'pending');
+  try {
+    const data = await getJSON('/api/funding');
+    if (generation !== fundingGeneration || state.mode !== 'funding') return;
+    renderFunding(data);
+    setStatus(`FUNDING TRACKER · ${data.opportunities.length} SETUPS`, 'live');
+  } catch (error) {
+    if (generation === fundingGeneration && state.mode === 'funding') {
+      $('#fundingQuality').textContent = 'DEGRADED';
+      $('#fundingQuality').className = 'quality bad';
+      setStatus(error.message, 'error');
+    }
+  }
 }
 
 function loadAll() { loadMarket(); loadOverview(); loadMatrix(); }
@@ -157,7 +241,10 @@ function runCommand(raw) {
   const [command, value] = raw.trim().split(/\s+/); const cmd = command?.toLowerCase();
   if (cmd === 'asset') selectAsset(String(value).toUpperCase());
   else if (cmd === 'timeframe') selectTimeframe(String(value).toLowerCase());
-  else if (cmd === 'refresh') loadAll();
+  else if (cmd === 'mode') selectMode(String(value).toLowerCase());
+  else if (cmd === 'funding') selectMode('funding');
+  else if (cmd === 'market') selectMode('market');
+  else if (cmd === 'refresh') state.mode === 'funding' ? loadFunding() : loadAll();
 }
 
 function setupCommands() {
@@ -167,10 +254,15 @@ function setupCommands() {
   document.addEventListener('keydown', (event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); open(); } if (event.key === '/' && !dialog.open) { event.preventDefault(); open(); } });
   input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); runCommand(input.value); input.value = ''; dialog.close(); } });
   document.querySelectorAll('[data-command]').forEach((button) => button.addEventListener('click', () => runCommand(button.dataset.command)));
+  document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => selectMode(button.dataset.mode)));
 }
 
 function tickClock() { $('#clock').textContent = `${new Date().toISOString().slice(11, 19)} UTC`; }
 window.addEventListener('resize', () => { if (state.market) { renderPriceChart($('#priceChart'), state.market.series.candles); renderLineChart($('#deltaChart'), state.market.series.cumulativeDelta, state.market.metrics.bookImbalance >= 0 ? '#62e6a7' : '#ff5f68'); } });
 
 renderTabs(); renderMatrix(); renderUniverse(); setupCommands(); tickClock(); loadAll();
-setInterval(tickClock, 1_000); setInterval(loadMarket, 5_000); setInterval(loadOverview, 5_000); setInterval(loadMatrix, 60_000);
+setInterval(tickClock, 1_000);
+setInterval(() => { if (state.mode === 'market') loadMarket(); }, 5_000);
+setInterval(() => { if (state.mode === 'market') loadOverview(); }, 5_000);
+setInterval(() => { if (state.mode === 'market') loadMatrix(); }, 60_000);
+setInterval(() => { if (state.mode === 'funding') loadFunding(); }, 30_000);
