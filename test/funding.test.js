@@ -1,11 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeTicker, findFundingArbitrage, buildFundingSnapshot } from '../lib/funding.js';
+import { normalizeTicker, findFundingArbitrage, buildFundingSnapshot, extractProFundingVenueMarkets } from '../lib/funding.js';
 
 test('normalizeTicker aligns common perpetual symbols', () => {
   assert.equal(normalizeTicker('BTC/USDC'), 'BTC');
   assert.equal(normalizeTicker('eth-perp'), 'ETH');
   assert.equal(normalizeTicker('1000BONK'), 'BONK');
+});
+
+test('extractProFundingVenueMarkets derives hourly rates without inventing prices', () => {
+  const opportunities = [
+    { symbol: 'BTC/USDC', long_exchange: 'TxFlow', long_apr: -8.76, long_volume_24h: 2_000_000, timestamp: '2026-10-15T07:00:00Z', short_exchange: 'Other', short_apr: 1 },
+    { symbol: 'BTC/USDC', long_exchange: 'Other', long_apr: 1, short_exchange: 'TxFlow', short_apr: -4.38, short_volume_24h: 3_000_000, timestamp: '2026-10-15T06:00:00Z' },
+  ];
+  const markets = extractProFundingVenueMarkets(opportunities, 'TxFlow');
+  assert.equal(markets.length, 1);
+  assert.equal(markets[0].ticker, 'BTC');
+  assert.equal(markets[0].markPrice, null);
+  assert.equal(markets[0].priceType, 'unavailable');
+  assert.ok(Math.abs(markets[0].fundingRate1h - (-8.76 / 100 / 8_760)) < 1e-12);
+  assert.equal(markets[0].volume24h, 2_000_000);
 });
 
 test('findFundingArbitrage selects low-rate long and high-rate short', () => {
@@ -19,6 +33,16 @@ test('findFundingArbitrage selects low-rate long and high-rate short', () => {
   assert.ok(Math.abs(opportunities[0].grossRate1h - 0.0003) < 1e-12);
   assert.equal(opportunities[0].breakEvenHours, 4);
   assert.ok(opportunities[0].priceDivergenceBps > 99);
+});
+
+test('findFundingArbitrage accepts public rates with unavailable venue prices', () => {
+  const [opportunity] = findFundingArbitrage([
+    { dex: 'TxFlow', ticker: 'BTC', markPrice: null, priceType: 'unavailable', fundingRate1h: -0.0001, volume24h: 5_000_000 },
+    { dex: 'Hyperliquid', ticker: 'BTC', markPrice: 80_000, priceType: 'mark', fundingRate1h: 0.0001, volume24h: 50_000_000 },
+  ], { focusAssets: ['BTC'] });
+  assert.equal(opportunity.longDex, 'TxFlow');
+  assert.equal(opportunity.priceDivergenceBps, null);
+  assert.equal(opportunity.priceRisk, 'PRICE_UNAVAILABLE');
 });
 
 test('findFundingArbitrage does not grade oracle prices as executable basis', () => {

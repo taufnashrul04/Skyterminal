@@ -15,7 +15,8 @@ Original web-based market intelligence terminal for **BTC, ETH, SOL, and HYPE**.
 - Keyboard command bar (`Ctrl/Cmd+K` or `/`)
 - Responsive desktop/mobile monitor layout
 - Funding-arbitrage tracker with hourly-normalized rates, long/short venue routing, gross annualized spread, price-gap checks, and cost-aware break-even
-- Live funding adapters for Hyperliquid, Variational, RISEx, Nado, plus optional Decibel via `DECIBEL_BEARER`
+- Live funding adapters for Hyperliquid, Variational, RISEx, Nado, TxFlow, Arcus, and PopDEX; optional Decibel via `DECIBEL_BEARER`
+- TxFlow, Arcus, and PopDEX rates come from ProFunding's open market-data endpoint (no API key); price/basis is explicitly shown as unavailable rather than fabricated
 - Partial-source resilience: one unavailable venue does not take down the tracker
 
 ## Run
