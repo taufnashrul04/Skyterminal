@@ -28,14 +28,19 @@ test('health endpoint identifies Skyterminal', async () => {
   });
 });
 
-test('market endpoint passes normalized query values to loader', async () => {
+test('market endpoint passes normalized query values and flow mode to loader', async () => {
+  let received;
   await withServer(async (base) => {
-    const response = await fetch(`${base}/api/market?coin=eth&interval=1h`);
+    const response = await fetch(`${base}/api/market?coin=eth&interval=1h&flow=1`);
     const body = await response.json();
     assert.equal(response.status, 200);
     assert.equal(body.asset, 'ETH');
     assert.equal(body.timeframe, '1h');
-  });
+    assert.deepEqual(received, ['ETH', '1h', true]);
+  }, { marketLoader: async (...args) => {
+    received = args;
+    return { asset: args[0], timeframe: args[1], price: 123 };
+  } });
 });
 
 test('market cache coalesces concurrent requests for the same key', async () => {

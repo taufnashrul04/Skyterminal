@@ -55,8 +55,8 @@ function cached(loader, ttlMs) {
   };
 }
 
-async function defaultMarketLoader(coin, interval) {
-  return buildMarketSnapshot(await fetchMarketData(coin, interval, 300));
+async function defaultMarketLoader(coin, interval, includeTrades = false) {
+  return buildMarketSnapshot(await fetchMarketData(coin, interval, 300, fetch, { includeTrades }));
 }
 
 async function serveStatic(response, pathname, publicDir) {
@@ -108,7 +108,7 @@ export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader
     inFlight += 1;
     try {
       if (url.pathname === '/api/health') {
-        return sendJson(response, 200, { name: 'Skyterminal', status: 'ok', version: '0.6.0', marketIntelAssets: ['BTC', 'ETH', 'SOL', 'HYPE'], fundingUniverse: 'ALL', sources: ['Hyperliquid', 'Variational', 'RISEx', 'Nado', 'TxFlow', 'Arcus', 'PopDEX', 'Lighter'] });
+        return sendJson(response, 200, { name: 'Skyterminal', status: 'ok', version: '0.7.0', marketIntelAssets: ['BTC', 'ETH', 'SOL', 'HYPE'], fundingUniverse: 'ALL', sources: ['Hyperliquid', 'Variational', 'RISEx', 'Nado', 'TxFlow', 'Arcus', 'PopDEX', 'Lighter'] });
       }
       if (url.pathname === '/api/overview') {
         return sendJson(response, 200, { asOf: new Date().toISOString(), mids: await getMids() });
@@ -119,7 +119,8 @@ export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader
       if (url.pathname === '/api/market') {
         const coin = String(url.searchParams.get('coin') ?? 'BTC').toUpperCase();
         const interval = String(url.searchParams.get('interval') ?? '5m');
-        return sendJson(response, 200, await getMarket(coin, interval));
+        const includeTrades = url.searchParams.get('flow') === '1';
+        return sendJson(response, 200, await getMarket(coin, interval, includeTrades));
       }
       if (await serveStatic(response, decodeURIComponent(url.pathname), publicDir)) return;
       sendJson(response, 404, { error: 'Not found' });

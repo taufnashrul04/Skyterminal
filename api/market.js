@@ -9,7 +9,8 @@ export async function GET(request) {
     const url = new URL(request.url);
     const coin = String(url.searchParams.get('coin') ?? 'BTC').toUpperCase();
     const interval = String(url.searchParams.get('interval') ?? '5m');
-    return json(buildMarketSnapshot(await fetchMarketData(coin, interval, 300)));
+    const includeTrades = url.searchParams.get('flow') === '1';
+    return json(buildMarketSnapshot(await fetchMarketData(coin, interval, 300, fetch, { includeTrades })));
   } catch (error) {
     return errorResponse(error);
   }

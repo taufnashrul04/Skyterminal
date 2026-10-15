@@ -60,7 +60,7 @@ kbd { color: var(--signal); font: inherit; }
 .timeframe-tabs .tab { min-width: 46px; padding: 0 10px; font-size: 10px; }
 .terminal-grid {
   display: grid; grid-template-columns: minmax(0, 2.25fr) minmax(250px, .75fr); grid-template-areas:
-  "market regime" "timeframes timeframes" "flow risk" "universe universe" "doctrine doctrine";
+  "market regime" "timeframes timeframes" "flow risk" "exo exo" "universe universe" "doctrine doctrine";
   gap: 1px; background: var(--line); border-bottom: 1px solid var(--line);
 }
 .panel { background: var(--surface); min-width: 0; }
@@ -69,11 +69,18 @@ kbd { color: var(--signal); font: inherit; }
 .timeframe-panel { grid-area: timeframes; }
 .flow-panel { grid-area: flow; }
 .risk-panel { grid-area: risk; }
+.exo-panel { grid-area: exo; }
 .universe-panel { grid-area: universe; }
 .doctrine-panel { grid-area: doctrine; }
-.panel-head { min-height: 66px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--line); }
+.panel-head { min-height: 66px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--line); cursor: pointer; }
 .panel-head.compact { min-height: 37px; align-items: center; padding: 0 12px; color: var(--muted); font-size: 9px; letter-spacing: .08em; }
-.eyebrow { color: var(--muted); font-size: 9px; letter-spacing: .12em; }
+.panel-head > :first-child { margin-right: auto; }
+.eyebrow { color: var(--ice); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-shadow: 0 0 12px color-mix(in srgb, var(--ice) 28%, transparent); }
+.panel-toggle { flex: 0 0 auto; width: 24px; height: 24px; margin-left: 10px; border: 1px solid var(--line-hot); background: #080c0e; color: var(--signal); cursor: pointer; font-weight: 800; line-height: 1; }
+.panel-toggle:hover, .panel-toggle:focus-visible { border-color: var(--signal); outline: 0; box-shadow: 0 0 12px color-mix(in srgb, var(--signal) 22%, transparent); }
+.panel.collapsed > :not(.panel-head) { display: none !important; }
+.panel.collapsed > .panel-head { min-height: 39px; border-bottom: 0; align-items: center; }
+.panel.collapsed { min-height: 39px; }
 .instrument-line { display: flex; align-items: baseline; gap: 13px; margin-top: 4px; }
 h1 { margin: 0; font: 800 26px/1 var(--sans); letter-spacing: -.04em; }
 .price { font-size: 22px; color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -101,6 +108,18 @@ canvas { display: block; width: 100%; height: 100%; }
 .flow-footer { display: grid; grid-template-columns: repeat(3,1fr); border-top: 1px solid var(--line); }.flow-footer span { padding: 10px 12px; color: var(--muted); border-right: 1px solid var(--line); }.flow-footer span:last-child { border-right: 0; }.flow-footer b { display: block; margin-top: 4px; color: var(--ink); font-weight: 500; }
 .risk-stack { padding: 8px 12px; }.risk-item { padding: 11px 0; border-bottom: 1px solid var(--line); }.risk-line { display: flex; justify-content: space-between; margin-bottom: 7px; }.risk-line span { color: var(--muted); }.risk-track { height: 3px; background: #182126; }.risk-track i { display: block; height: 100%; background: var(--amber); }
 .method-note { color: var(--muted); font-size: 9px; line-height: 1.5; margin: 9px 12px; }
+.exo-live-grid { display: grid; grid-template-columns: minmax(320px, 1.25fr) minmax(300px, .75fr); min-height: 220px; }
+.volume-profile { padding: 12px; border-right: 1px solid var(--line); display: grid; gap: 3px; align-content: center; }
+.profile-row { display: grid; grid-template-columns: 88px 1fr 70px; gap: 9px; align-items: center; min-height: 7px; font-size: 8px; color: var(--muted); }
+.profile-bar { height: 6px; background: #16242a; position: relative; overflow: hidden; }
+.profile-bar i { display: block; height: 100%; background: var(--ice); opacity: .72; }
+.profile-row.poc { color: var(--signal); }.profile-row.poc .profile-bar i { background: var(--signal); opacity: 1; }
+.exo-metrics { display: grid; grid-template-columns: repeat(2, 1fr); }
+.exo-card { padding: 14px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); min-height: 92px; }
+.exo-card:nth-child(2n) { border-right: 0; }
+.exo-card span, .exo-card small { display: block; color: var(--muted); font-size: 8px; letter-spacing: .08em; }
+.exo-card strong { display: block; margin: 10px 0 5px; color: var(--ink); font: 800 17px var(--sans); }
+.exo-card.positive strong { color: var(--positive); }.exo-card.negative strong { color: var(--danger); }.exo-card.proxy strong { color: var(--amber); }
 .universe-grid { display: grid; grid-template-columns: repeat(4,1fr); }.universe-card { border-right: 1px solid var(--line); padding: 14px; cursor: pointer; }.universe-card:last-child { border-right: 0; }.universe-card:hover, .universe-card.active { background: var(--surface-2); }.universe-card.active { box-shadow: inset 0 -2px var(--signal); }.universe-card header { display: flex; justify-content: space-between; color: var(--muted); }.universe-card strong { display: block; font: 700 20px var(--sans); margin-top: 10px; }.universe-card small { color: var(--muted); }
 .doctrine-grid { display: grid; grid-template-columns: repeat(4,1fr); }.doctrine-grid article { min-height: 112px; padding: 14px; border-right: 1px solid var(--line); }.doctrine-grid article:last-child { border-right: 0; }.doctrine-grid article > span { color: var(--signal); }.doctrine-grid strong { display: block; margin-top: 12px; font: 700 13px var(--sans); }.doctrine-grid p { color: var(--muted); line-height: 1.45; margin-bottom: 0; }
 [hidden] { display: none !important; }
@@ -141,8 +160,9 @@ canvas { display: block; width: 100%; height: 100%; }
 @media (max-width: 960px) {
   .topbar { grid-template-columns: 1fr auto; }.session-strip { display: none; }
   .terminal-grid, .funding-dashboard { grid-template-columns: 1fr; }
-  .terminal-grid { grid-template-areas: "market" "regime" "timeframes" "flow" "risk" "universe" "doctrine"; }
+  .terminal-grid { grid-template-areas: "market" "regime" "timeframes" "flow" "risk" "exo" "universe" "doctrine"; }
   .funding-dashboard { grid-template-areas: "hero" "sources" "opportunities" "rates" "doctrine"; }
+  .exo-live-grid { grid-template-columns: 1fr; }.volume-profile { border-right: 0; border-bottom: 1px solid var(--line); }
   .funding-summary { grid-template-columns: repeat(2,1fr); }
   .timeframe-matrix, .universe-grid { overflow-x: auto; grid-template-columns: repeat(5, minmax(150px,1fr)); }.universe-grid { grid-template-columns: repeat(4,minmax(160px,1fr)); }
   .doctrine-grid { grid-template-columns: repeat(2,1fr); }.chart-wrap { height: 370px; }

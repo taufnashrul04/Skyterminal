@@ -1,3 +1,5 @@
+import { normalizePanelState, setPanelCollapsed } from './panel-state.js';
+
 const ASSETS = ['BTC', 'ETH', 'SOL', 'HYPE'];
 const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
 const state = { mode: 'market', asset: 'BTC', timeframe: '5m', market: null, funding: null, mids: {}, matrix: {}, busy: false };
@@ -12,11 +14,53 @@ const number = (value, digits = 2) => Number(value).toFixed(digits);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const compactUSD = (value) => Number(value).toLocaleString('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
+const compactNumber = (value) => Number(value).toLocaleString('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 
 function setStatus(message, kind = 'live') {
   $('#statusMessage').textContent = message;
   $('#connectionLabel').textContent = kind === 'error' ? 'DEGRADED' : kind === 'pending' ? 'SYNCING' : 'LIVE';
   $('#liveDot').className = `live-dot ${kind}`;
+}
+
+const PANEL_STATE_KEY = 'skyterminal.panel-state.v1';
+
+function readPanelState() {
+  try { return normalizePanelState(JSON.parse(localStorage.getItem(PANEL_STATE_KEY) || '{}')); }
+  catch { return {}; }
+}
+
+function setupCollapsiblePanels() {
+  let saved = readPanelState();
+  document.querySelectorAll('.panel').forEach((panel, index) => {
+    const header = panel.querySelector(':scope > .panel-head');
+    if (!header) return;
+    const panelId = panel.dataset.panelId || [...panel.classList].find((name) => name !== 'panel') || `panel-${index}`;
+    panel.dataset.panelId = panelId;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'panel-toggle';
+    button.setAttribute('aria-label', `Toggle ${panelId.replaceAll('-', ' ')}`);
+    header.append(button);
+    const apply = (collapsed) => {
+      panel.classList.toggle('collapsed', collapsed);
+      button.textContent = collapsed ? '+' : '−';
+      button.setAttribute('aria-expanded', String(!collapsed));
+      button.title = collapsed ? 'Expand section' : 'Minimize section';
+    };
+    apply(Boolean(saved[panelId]));
+    const toggle = () => {
+      const collapsed = !panel.classList.contains('collapsed');
+      apply(collapsed);
+      saved = setPanelCollapsed(saved, panelId, collapsed);
+      try { localStorage.setItem(PANEL_STATE_KEY, JSON.stringify(saved)); }
+      catch { /* Storage can be disabled; panel behavior still works for this page. */ }
+    };
+    button.addEventListener('click', (event) => { event.stopPropagation(); toggle(); });
+    header.addEventListener('click', (event) => {
+      if (event.target.closest('button, input, select, label, a')) return;
+      toggle();
+    });
+  });
 }
 
 async function getJSON(url, options = {}) {
@@ -87,6 +131,7 @@ function renderMarket(data) {
   $('#imbalance').textContent = `${m.bookImbalance >= 0 ? 'BID' : 'ASK'} ${Math.abs(m.bookImbalance * 100).toFixed(1)}%`;
   $('#spread').textContent = `${m.spreadBps.toFixed(2)} BPS`;
   renderRisk(data);
+  renderExo(data);
   renderPriceChart($('#priceChart'), data.series.candles);
   renderLineChart($('#deltaChart'), data.series.cumulativeDelta, m.bookImbalance >= 0 ? '#62e6a7' : '#ff5f68');
 }
@@ -103,6 +148,32 @@ function renderRisk(data) {
     ['SPREAD COST', Math.min(m.spreadBps / 100, 1), `${m.spreadBps.toFixed(2)} bps`],
   ];
   $('#riskStack').innerHTML = items.map(([label, raw, display]) => `<div class="risk-item"><div class="risk-line"><span>${label}</span><b>${display}</b></div><div class="risk-track"><i style="width:${clamp(raw * 500, 2, 100)}%"></i></div></div>`).join('');
+}
+
+function renderExo(data) {
+  const exo = data.exo;
+  if (!exo) return;
+  const profile = exo.profile ?? { bins: [] };
+  const maxVolume = Math.max(...profile.bins.map((bin) => bin.volume), 1);
+  $('#volumeProfile').innerHTML = profile.available ? [...profile.bins].reverse().map((bin) => {
+    const isPoc = Math.abs(bin.price - profile.poc) <= Math.max(Math.abs(profile.poc) * 1e-10, 1e-10);
+    return `<div class="profile-row ${isPoc ? 'poc' : ''}"><span>${fmtPrice(bin.price)}</span><div class="profile-bar"><i style="width:${clamp(bin.volume / maxVolume * 100, 0, 100)}%"></i></div><b>${isPoc ? 'POC' : compactNumber(bin.volume)}</b></div>`;
+  }).join('') : '<div class="empty-cell">PROFILE UNAVAILABLE · ZERO VOLUME</div>';
+  const flow = exo.recentFlow;
+  const deltaClass = flow.deltaNotional > 0 ? 'positive' : flow.deltaNotional < 0 ? 'negative' : '';
+  const deltaSide = flow.deltaNotional > 0 ? 'BUY' : flow.deltaNotional < 0 ? 'SELL' : 'FLAT';
+  const absorption = String(exo.absorptionProxy ?? 'UNAVAILABLE').replaceAll('_', ' ');
+  const cards = [
+    ['PROFILE POC', profile.available ? `$${fmtPrice(profile.poc)}` : 'N/A', `${data.timeframe.toUpperCase()} CANDLE PROFILE`, ''],
+    ['VALUE AREA 70%', profile.available ? `$${fmtPrice(profile.val)} – $${fmtPrice(profile.vah)}` : 'N/A', 'VAL → VAH', ''],
+    ['WINDOW VWAP', `$${fmtPrice(exo.session.vwap)}`, `HIGH $${fmtPrice(exo.session.high)} / LOW $${fmtPrice(exo.session.low)}`, ''],
+    ['WINDOW RANGE', pct(exo.session.rangePct), `${data.quality.sampleSize} BARS`, ''],
+    ['RECENT TRADE DELTA', `${deltaSide} ${compactUSD(Math.abs(flow.deltaNotional))}`, `${flow.count} PUBLIC PRINTS`, deltaClass],
+    ['TRADE IMBALANCE', pct(flow.imbalance), `${compactUSD(flow.buyNotional)} BUY / ${compactUSD(flow.sellNotional)} SELL`, deltaClass],
+    ['ABSORPTION CHECK', absorption, 'PRICE RESPONSE PROXY', 'proxy'],
+    ['PROFILE METHOD', 'CANDLE PROXY', 'NOT TRADE-AT-PRICE FOOTPRINT', 'proxy'],
+  ];
+  $('#exoMetrics').innerHTML = cards.map(([label, value, detail, cls]) => `<article class="exo-card ${cls}"><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join('');
 }
 
 function resizeCanvas(canvas) {
@@ -158,7 +229,7 @@ async function loadMarket() {
   const timeframe = state.timeframe;
   setStatus(`SYNCING ${asset} ${timeframe.toUpperCase()}…`, 'pending');
   try {
-    const data = await getJSON(`/api/market?coin=${asset}&interval=${timeframe}`);
+    const data = await getJSON(`/api/market?coin=${asset}&interval=${timeframe}&flow=1`);
     if (generation !== marketGeneration || asset !== state.asset || timeframe !== state.timeframe || state.mode !== 'market') return;
     renderMarket(data);
     state.matrix[timeframe] = data;
@@ -311,7 +382,7 @@ function setupCommands() {
 function tickClock() { $('#clock').textContent = `${new Date().toISOString().slice(11, 19)} UTC`; }
 window.addEventListener('resize', () => { if (state.market) { renderPriceChart($('#priceChart'), state.market.series.candles); renderLineChart($('#deltaChart'), state.market.series.cumulativeDelta, state.market.metrics.bookImbalance >= 0 ? '#62e6a7' : '#ff5f68'); } });
 
-renderTabs(); renderMatrix(); renderUniverse(); setupCommands(); tickClock(); loadAll();
+renderTabs(); renderMatrix(); renderUniverse(); setupCollapsiblePanels(); setupCommands(); tickClock(); loadAll();
 setInterval(tickClock, 1_000);
 setInterval(() => { if (state.mode === 'market') loadMarket(); }, 5_000);
 setInterval(() => { if (state.mode === 'market') loadOverview(); }, 5_000);

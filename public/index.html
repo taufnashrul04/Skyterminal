@@ -12,7 +12,7 @@
   <header class="topbar">
     <div class="brand" aria-label="Skyterminal">
       <span class="brand-mark">SKY/</span><span class="brand-name">TERMINAL</span>
-      <span class="build">0.6.0</span>
+      <span class="build">0.7.0</span>
     </div>
     <div class="session-strip">
       <span class="live-dot" id="liveDot"></span>
@@ -89,6 +89,15 @@
       <div class="risk-stack" id="riskStack"></div>
       <p class="method-note">Loss metrics use observed returns. Tail confidence is limited when history is short.</p>
     </aside>
+
+    <section class="panel exo-panel">
+      <header class="panel-head compact"><span class="eyebrow">EXO-INSPIRED LIVE ANALYTICS</span><span>FREE PUBLIC DATA</span></header>
+      <div class="exo-live-grid">
+        <div class="volume-profile" id="volumeProfile"></div>
+        <div class="exo-metrics" id="exoMetrics"></div>
+      </div>
+      <p class="method-note">Volume profile assigns each candle's volume to its typical-price bin. Recent-print delta uses live aggressor-side trades; limited print count is displayed explicitly.</p>
+    </section>
 
     <section class="panel universe-panel">
       <header class="panel-head compact"><span class="eyebrow">LAUNCH UNIVERSE</span><span>LIVE MIDS</span></header>

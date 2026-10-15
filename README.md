@@ -13,7 +13,8 @@ Original web-based market intelligence terminal. **Market Intel** intentionally 
 - Drawdown, spread, L2 book imbalance and depth
 - Candle-direction cumulative-volume proxy (explicitly labelled as a proxy)
 - Keyboard command bar (`Ctrl/Cmd+K` or `/`)
-- Responsive desktop/mobile monitor layout
+- Responsive desktop/mobile monitor layout with bold color-coded section titles and per-panel minimize/restore controls persisted in the browser
+- Exocharts-inspired live analytics from free public data: candle-derived volume profile (POC/VAH/VAL), window VWAP/high/low/range, recent aggressor-trade delta, trade imbalance, and an explicitly labelled absorption proxy
 - Funding-arbitrage tracker across the full connected market universe, with pair search, two-venue route selectors, hourly-normalized rates, long/short venue routing, gross annualized spread, price-gap checks, and cost-aware break-even
 - Live funding adapters for Hyperliquid, Variational, RISEx, Nado, TxFlow, Arcus, PopDEX, and Lighter
 - Lighter uses its public `funding-rates` and `orderBookDetails` endpoints; the published 8-hour-equivalent rate is converted to the hourly settlement rate
@@ -69,7 +70,9 @@ node --check public/app.js
 
 ## Accuracy notes
 
-- The delta panel currently uses candle-direction signed volume, **not trade-level CVD**. It is labelled `PROXY` in the UI.
+- The original delta chart still uses candle-direction signed volume, **not full-history trade-level CVD**. It is labelled `PROXY` in the UI.
+- The Exo live panel separately uses Hyperliquid's public recent aggressor trades for exact delta over the returned print window; it is not a persistent full-session CVD feed.
+- Volume profile, POC, VAH, VAL, VWAP and absorption checks are candle-derived approximations and are labelled as proxies rather than native Exocharts footprints.
 - Regime metrics are descriptive and should not be interpreted as guaranteed trade signals.
 - Skyterminal currently monitors data only; order execution is disabled.
 - Funding APR is a snapshot extrapolation, not guaranteed yield. Rates can flip, and basis, fees, slippage, liquidity, collateral, and venue risk can dominate the spread.

@@ -9,7 +9,8 @@
   "rewrites": [
     { "source": "/", "destination": "/public/index.html" },
     { "source": "/styles.css", "destination": "/public/styles.css" },
-    { "source": "/app.js", "destination": "/public/app.js" }
+    { "source": "/app.js", "destination": "/public/app.js" },
+    { "source": "/panel-state.js", "destination": "/public/panel-state.js" }
   ],
   "headers": [
     {

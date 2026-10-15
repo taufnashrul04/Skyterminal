@@ -9,6 +9,9 @@ import {
   historicalRisk,
   orderBookMetrics,
   volumeDeltaProxy,
+  volumeProfile,
+  recentTradeFlow,
+  sessionLevels,
   buildMarketSnapshot,
 } from '../lib/indicators.js';
 
@@ -67,14 +70,63 @@ test('volumeDeltaProxy signs candle volume by candle direction', () => {
   assert.deepEqual(volumeDeltaProxy(candles), [10, 20, -30, 40]);
 });
 
+test('volumeProfile derives POC and value area from candle volume', () => {
+  const profile = volumeProfile(candles, 4, 0.7);
+  assert.equal(profile.bins.length, 4);
+  assert.ok(profile.poc >= 96 && profile.poc <= 104);
+  assert.ok(profile.val <= profile.poc);
+  assert.ok(profile.vah > profile.poc);
+  assert.equal(profile.val, profile.bins.find((bin) => bin.price >= profile.val)?.low ?? profile.val);
+  assert.equal(profile.totalVolume, 100);
+  assert.equal(profile.available, true);
+});
+
+test('volumeProfile marks zero-volume windows unavailable', () => {
+  const profile = volumeProfile([{ h: 101, l: 99, c: 100, v: 0 }]);
+  assert.equal(profile.available, false);
+  assert.equal(profile.poc, null);
+  assert.equal(profile.vah, null);
+  assert.equal(profile.val, null);
+});
+
+test('recentTradeFlow uses aggressor side for exact recent-print delta', () => {
+  const flow = recentTradeFlow([
+    { side: 'B', px: '100', sz: '2' },
+    { side: 'A', px: '101', sz: '1' },
+  ]);
+  assert.equal(flow.count, 2);
+  assert.equal(flow.buyNotional, 200);
+  assert.equal(flow.sellNotional, 101);
+  assert.equal(flow.deltaNotional, 99);
+});
+
+test('recentTradeFlow ignores non-finite prices, sizes, and notionals', () => {
+  const flow = recentTradeFlow([
+    { side: 'B', px: 'Infinity', sz: '2' },
+    { side: 'A', px: '100', sz: 'Infinity' },
+    { side: 'B', px: '100', sz: '1' },
+  ]);
+  assert.equal(flow.count, 1);
+  assert.equal(flow.deltaNotional, 100);
+});
+
+test('sessionLevels calculates high low and volume-weighted typical price', () => {
+  const levels = sessionLevels(candles);
+  assert.equal(levels.high, 104);
+  assert.equal(levels.low, 96);
+  assert.ok(levels.vwap > 96 && levels.vwap < 104);
+});
+
 test('buildMarketSnapshot returns the canonical dashboard contract', () => {
-  const result = buildMarketSnapshot({ coin: 'BTC', interval: '5m', candles, book: { levels: [[{ px: '99', sz: '4' }], [{ px: '101', sz: '2' }]] } });
+  const result = buildMarketSnapshot({ coin: 'BTC', interval: '5m', candles, book: { levels: [[{ px: '99', sz: '4' }], [{ px: '101', sz: '2' }]] }, trades: [{ side: 'B', px: '100', sz: '2' }] });
   assert.equal(result.asset, 'BTC');
   assert.equal(result.timeframe, '5m');
   assert.equal(result.price, 100);
   assert.equal(result.quality.stale, false);
   assert.ok(Number.isFinite(result.metrics.trend));
   assert.ok(Array.isArray(result.series.candles));
+  assert.ok(result.exo.profile.bins.length > 0);
+  assert.equal(result.exo.recentFlow.deltaNotional, 200);
 });
 
 test('buildMarketSnapshot sorts candles and rejects malformed market data', () => {
