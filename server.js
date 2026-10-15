@@ -108,7 +108,7 @@ export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader
     inFlight += 1;
     try {
       if (url.pathname === '/api/health') {
-        return sendJson(response, 200, { name: 'Skyterminal', status: 'ok', version: '0.5.0', marketIntelAssets: ['BTC', 'ETH', 'SOL', 'HYPE'], fundingUniverse: 'ALL', sources: ['Hyperliquid', 'Variational', 'RISEx', 'Nado', 'TxFlow', 'Arcus', 'PopDEX', 'Decibel'] });
+        return sendJson(response, 200, { name: 'Skyterminal', status: 'ok', version: '0.5.1', marketIntelAssets: ['BTC', 'ETH', 'SOL', 'HYPE'], fundingUniverse: 'ALL', sources: ['Hyperliquid', 'Variational', 'RISEx', 'Nado', 'TxFlow', 'Arcus', 'PopDEX', 'Decibel'] });
       }
       if (url.pathname === '/api/overview') {
         return sendJson(response, 200, { asOf: new Date().toISOString(), mids: await getMids() });

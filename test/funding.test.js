@@ -1,11 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeTicker, findFundingArbitrage, findFundingRoutes, buildFundingSnapshot, extractProFundingVenueMarkets } from '../lib/funding.js';
+import { normalizeTicker, normalizeVariationalFundingRate, findFundingArbitrage, findFundingRoutes, buildFundingSnapshot, extractProFundingVenueMarkets } from '../lib/funding.js';
 
 test('normalizeTicker aligns common perpetual symbols', () => {
   assert.equal(normalizeTicker('BTC/USDC'), 'BTC');
   assert.equal(normalizeTicker('eth-perp'), 'ETH');
   assert.equal(normalizeTicker('1000BONK'), 'BONK');
+});
+
+test('normalizeVariationalFundingRate treats API value as annual decimal rate', () => {
+  const hourly = normalizeVariationalFundingRate(-8.180293);
+  assert.ok(Math.abs(hourly - (-8.180293 / 8_760)) < 1e-12);
+  assert.ok(Math.abs(hourly * 100 - (-0.09338234018)) < 1e-9);
 });
 
 test('extractProFundingVenueMarkets derives hourly rates without inventing prices', () => {

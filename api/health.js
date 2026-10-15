@@ -6,7 +6,7 @@ export async function GET() {
   return json({
     name: 'Skyterminal',
     status: 'ok',
-    version: '0.5.0',
+    version: '0.5.1',
     marketIntelAssets: ['BTC', 'ETH', 'SOL', 'HYPE'],
     fundingUniverse: 'ALL',
     sources: ['Hyperliquid', 'Variational', 'RISEx', 'Nado', 'TxFlow', 'Arcus', 'PopDEX', 'Decibel'],
