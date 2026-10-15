@@ -15,7 +15,8 @@ Original web-based market intelligence terminal. **Market Intel** intentionally 
 - Keyboard command bar (`Ctrl/Cmd+K` or `/`)
 - Responsive desktop/mobile monitor layout
 - Funding-arbitrage tracker across the full connected market universe, with pair search, two-venue route selectors, hourly-normalized rates, long/short venue routing, gross annualized spread, price-gap checks, and cost-aware break-even
-- Live funding adapters for Hyperliquid, Variational, RISEx, Nado, TxFlow, Arcus, and PopDEX; optional Decibel via `DECIBEL_BEARER`
+- Live funding adapters for Hyperliquid, Variational, RISEx, Nado, TxFlow, Arcus, PopDEX, and Lighter
+- Lighter uses its public `funding-rates` and `orderBookDetails` endpoints; the published 8-hour-equivalent rate is converted to the hourly settlement rate
 - TxFlow, Arcus, and PopDEX rates come from ProFunding's open market-data endpoint (no API key); price/basis is explicitly shown as unavailable rather than fabricated
 - Variational's API field is treated as an annualized decimal rate and converted to an hourly decimal before cross-venue comparison
 - Partial-source resilience: one unavailable venue does not take down the tracker
@@ -46,8 +47,6 @@ The repository includes Vercel Functions under `api/` and static rewrites in `ve
 npx vercel
 npx vercel --prod
 ```
-
-Set `DECIBEL_BEARER` in Vercel only if the optional authenticated Decibel feed is required.
 
 ## Test
 

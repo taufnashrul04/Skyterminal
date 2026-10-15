@@ -9,6 +9,8 @@ test('Vercel health function exposes split market universes', async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(body.marketIntelAssets, ['BTC', 'ETH', 'SOL', 'HYPE']);
   assert.equal(body.fundingUniverse, 'ALL');
+  assert.ok(body.sources.includes('Lighter'));
+  assert.ok(!body.sources.includes('Decibel'));
 });
 
 test('Vercel market function rejects assets outside Market Intel universe', async () => {

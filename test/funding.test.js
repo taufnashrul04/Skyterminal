@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeTicker, normalizeVariationalFundingRate, findFundingArbitrage, findFundingRoutes, buildFundingSnapshot, extractProFundingVenueMarkets } from '../lib/funding.js';
+import { normalizeTicker, normalizeVariationalFundingRate, extractLighterMarkets, findFundingArbitrage, findFundingRoutes, buildFundingSnapshot, extractProFundingVenueMarkets } from '../lib/funding.js';
 
 test('normalizeTicker aligns common perpetual symbols', () => {
   assert.equal(normalizeTicker('BTC/USDC'), 'BTC');
@@ -12,6 +12,26 @@ test('normalizeVariationalFundingRate treats API value as annual decimal rate', 
   const hourly = normalizeVariationalFundingRate(-8.180293);
   assert.ok(Math.abs(hourly - (-8.180293 / 8_760)) < 1e-12);
   assert.ok(Math.abs(hourly * 100 - (-0.09338234018)) < 1e-9);
+});
+
+test('extractLighterMarkets joins public rates with active perp market details', () => {
+  const markets = extractLighterMarkets(
+    { funding_rates: [
+      { market_id: 1, exchange: 'lighter', symbol: 'BTC', rate: 0.000096 },
+      { market_id: 2, exchange: 'binance', symbol: 'ETH', rate: 0.0002 },
+      { market_id: 3, exchange: 'lighter', symbol: 'SOL', rate: -0.00008 },
+    ] },
+    { order_book_details: [
+      { market_id: 1, symbol: 'BTC', market_type: 'perp', status: 'active', mark_price: '100000', daily_quote_token_volume: 25_000_000 },
+      { market_id: 3, symbol: 'SOL', market_type: 'perp', status: 'inactive', mark_price: '200', daily_quote_token_volume: 1_000_000 },
+    ] },
+  );
+  assert.equal(markets.length, 1);
+  assert.equal(markets[0].dex, 'Lighter');
+  assert.equal(markets[0].ticker, 'BTC');
+  assert.equal(markets[0].markPrice, 100_000);
+  assert.equal(markets[0].volume24h, 25_000_000);
+  assert.ok(Math.abs(markets[0].fundingRate1h - 0.000012) < 1e-12);
 });
 
 test('extractProFundingVenueMarkets derives hourly rates without inventing prices', () => {
