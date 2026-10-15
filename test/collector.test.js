@@ -23,10 +23,13 @@ test('collector endpoint returns local collector health and analytics summary', 
     assert.equal(body.health.data.status, 'ok');
     assert.equal(body.analytics.asset, 'BTC');
     assert.equal(body.analytics.cvd.length, 1);
+    assert.equal(body.analytics.tpo.poc, '102');
+    assert.equal(body.analytics.footprint.bars.length, 1);
+    assert.equal(body.analytics.liquidations.totals.long, '0');
   }, async () => ({
     available: true,
     health: { data: { status: 'ok' } },
-    analytics: { asset: 'BTC', cvd: [{ close: '4' }], profile: { poc: '102' } },
+    analytics: { asset: 'BTC', cvd: [{ close: '4' }], profile: { poc: '102' }, tpo: { poc: '102' }, footprint: { bars: [{}] }, liquidations: { totals: { long: '0' } } },
   }));
 });
 
