@@ -183,7 +183,7 @@ function renderCollectorSummary(summary) {
   existing.forEach((node) => node.remove());
   const health = summary?.available ? summary.health?.data : null;
   const rows = summary?.available ? [
-    ['COLLECTOR CVD', summary.analytics?.cvd?.buckets?.at(-1)?.close ?? 'N/A', '15M SESSION WINDOW', 'collector-card'],
+    ['CVD — AGGREGATE SPOT + PERP', summary.analytics?.cvd?.buckets?.at(-1)?.close ?? 'N/A', 'BINANCE · BYBIT · OKX · HYPERLIQUID', 'collector-card'],
     ['TRUE PROFILE POC', summary.analytics?.profile?.poc ?? 'N/A', 'TRADE-AT-PRICE', 'collector-card'],
     ['TPO POC', summary.analytics?.tpo?.poc ?? 'N/A', '30M MARKET PROFILE', 'collector-card'],
     ['LIQUIDATION FLOW', `${summary.analytics?.liquidations?.totals?.long ?? '0'} LONG / ${summary.analytics?.liquidations?.totals?.short ?? '0'} SHORT`, 'GROSS · NOTIONAL N/A', 'collector-card'],

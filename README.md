@@ -75,9 +75,9 @@ node --check public/app.js
 - `research/` — indicator specifications derived from the PDF corpus
 - `imports/exocharts/` — decoded reference configurations and manifests
 
-## Accuracy notes
-
-- The original delta chart still uses candle-direction signed volume, **not full-history trade-level CVD**. It is labelled `PROXY` in the UI.
+- Collector CVD is an aggregate of trade streams across Binance, Bybit, OKX, and Hyperliquid, combining spot and perpetual markets; it is not CEX-only and it is separate from liquidation events.
+- Liquidation analytics currently come from Binance USD-M `forceOrder`, Bybit Linear `allLiquidation`, and OKX Swap `liquidation-orders`; Hyperliquid liquidation is not included.
+- The dashboard labels this as `CVD — AGGREGATE SPOT + PERP` to avoid implying a single-venue or CEX-only calculation.
 - The Exo live panel separately uses Hyperliquid's public recent aggressor trades for exact delta over the returned print window; it is not a persistent full-session CVD feed.
 - Volume profile, POC, VAH, VAL, VWAP and absorption checks are candle-derived approximations and are labelled as proxies rather than native Exocharts footprints.
 - Regime metrics are descriptive and should not be interpreted as guaranteed trade signals.
