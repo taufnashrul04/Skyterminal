@@ -379,10 +379,36 @@ function renderLiquidations(summary) {
     ['SHORT POSITIONS', totals?.short ?? '—', 'POSITION SIDE'],
     ['EXPECTED PRESSURE', totals?.netExpectedPressure ?? '—', 'PRESENTATION METADATA'],
   ].map(([label, value, detail]) => `<article><span>${label}</span><strong>${esc(value)}</strong><small>${detail}</small></article>`).join('');
+  renderLiquidationHeatmap(analytics?.heatmap);
   $('#liquidationRows').innerHTML = buckets.length
     ? [...buckets].reverse().map((bucket) => `<tr><td>${new Date(bucket.startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${new Date(bucket.endMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td><td class="negative">${esc(bucket.long)}</td><td class="positive">${esc(bucket.short)}</td><td>${esc(bucket.unknown)}</td><td><strong>${esc(bucket.total)}</strong></td><td>${esc(bucket.netExpectedPressure)}</td></tr>`).join('')
     : '<tr><td colspan="6" class="empty-cell">NO LIQUIDATION DATA AVAILABLE</td></tr>';
   if (health?.status === 'ok') setStatus(`${state.asset} LIQUIDATIONS UPDATED`, 'live');
+}
+
+function renderLiquidationHeatmap(heatmap) {
+  const buckets = heatmap?.buckets ?? [];
+  const prices = [...new Set(buckets.flatMap((bucket) => (bucket.levels ?? []).map((level) => level.price)))].sort((a, b) => Number(b) - Number(a));
+  const max = Math.max(...buckets.flatMap((bucket) => (bucket.levels ?? []).map((level) => Number(level.total))), 1);
+  if (!buckets.length || !prices.length) {
+    $('#liquidationHeatmap').innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>';
+    return;
+  }
+  const header = `<div class="heatmap-corner">PRICE</div>${buckets.map((bucket) => `<div class="heatmap-time">${new Date(bucket.startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`).join('')}`;
+  const rows = prices.map((price) => {
+    const cells = buckets.map((bucket) => {
+      const level = (bucket.levels ?? []).find((item) => item.price === price);
+      if (!level) return '<div class="heatmap-cell empty"></div>';
+      const total = Number(level.total) || 0;
+      const long = Number(level.long) || 0;
+      const short = Number(level.short) || 0;
+      const alpha = Math.min(.95, .16 + Math.sqrt(total / max) * .78);
+      const color = long > short * 1.15 ? `rgba(255,95,104,${alpha})` : short > long * 1.15 ? `rgba(98,230,167,${alpha})` : `rgba(255,190,85,${alpha})`;
+      return `<div class="heatmap-cell" style="background:${color}" title="${esc(price)} · total ${esc(level.total)} · long ${esc(level.long)} · short ${esc(level.short)}"><span>${compactNumber(total)}</span></div>`;
+    }).join('');
+    return `<div class="heatmap-price">${fmtPrice(price)}</div>${cells}`;
+  }).join('');
+  $('#liquidationHeatmap').innerHTML = `<div class="heatmap-grid" style="--heat-columns:${buckets.length}">${header}${rows}</div><div class="heatmap-legend"><span><i class="long"></i>LONG POSITIONS</span><span><i class="short"></i>SHORT POSITIONS</span><span><i class="mixed"></i>MIXED</span><small>${heatmap.method?.replaceAll('_', ' ') ?? 'ACTUAL EVENTS'}</small></div>`;
 }
 
 async function loadLiquidations() {

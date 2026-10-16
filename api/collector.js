@@ -21,15 +21,16 @@ export async function GET(request, options = {}) {
   const params = `asset=${encodeURIComponent(asset)}&from=${now - 15 * 60 * 1000}&to=${now}&bucket=1m`;
   try {
     const root = baseUrl.replace(/\/$/, '');
-    const [health, cvd, profile, tpo, footprint, liquidations] = await Promise.all([
+    const [health, cvd, profile, tpo, footprint, liquidations, heatmap] = await Promise.all([
       get(fetchImpl, `${root}/health`),
       get(fetchImpl, `${root}/v1/cvd?${params}`),
       get(fetchImpl, `${root}/v1/profile/volume?${params}&priceBin=1`),
       get(fetchImpl, `${root}/v1/profile/tpo?${params}&priceBin=1&tpoMinutes=30&ibMinutes=60`),
       get(fetchImpl, `${root}/v1/footprint?${params}&timeBucket=30m&priceBin=1`),
       get(fetchImpl, `${root}/v1/liquidations?${params}&bucket=30m`),
+      get(fetchImpl, `${root}/v1/liquidations/heatmap?${params}&timeBucket=5m&priceBin=10`),
     ]);
-    return json({ available: true, health, analytics: { asset, cvd: cvd.data ?? [], profile: profile.data ?? null, tpo: tpo.data ?? null, footprint: footprint.data ?? null, liquidations: liquidations.data ?? null } });
+    return json({ available: true, health, analytics: { asset, cvd: cvd.data ?? [], profile: profile.data ?? null, tpo: tpo.data ?? null, footprint: footprint.data ?? null, liquidations: { ...(liquidations.data ?? {}), heatmap: heatmap.data ?? null } } });
   } catch (error) {
     return json({ available: false, health: null, analytics: null, error: error instanceof Error ? error.message : String(error) });
   }
