@@ -2,13 +2,20 @@ import { json } from './_response.js';
 
 export const runtime = 'nodejs';
 const ASSETS = new Set(['BTC', 'ETH', 'SOL', 'HYPE']);
-const COLLECTOR_TIMEOUT_MS = Number(process.env.COLLECTOR_TIMEOUT_MS ?? 5_000);
+const COLLECTOR_TIMEOUT_MS = Number(process.env.COLLECTOR_TIMEOUT_MS ?? 12_000);
 
 async function get(fetchImpl, url) {
   const response = await fetchImpl(url, { cache: 'no-store', signal: AbortSignal.timeout(COLLECTOR_TIMEOUT_MS) });
   const body = await response.json();
   if (!response.ok) throw new Error(body?.error || `Collector HTTP ${response.status}`);
   return body;
+}
+
+async function getOptional(fetchImpl, url) {
+  try { return await get(fetchImpl, url); } catch (error) {
+    if (String(error?.message ?? '').includes('404') || String(error?.message ?? '').includes('route not found')) return null;
+    throw error;
+  }
 }
 
 export async function GET(request, options = {}) {
@@ -28,9 +35,9 @@ export async function GET(request, options = {}) {
       get(fetchImpl, `${root}/v1/profile/tpo?${params}&priceBin=1&tpoMinutes=30&ibMinutes=60`),
       get(fetchImpl, `${root}/v1/footprint?${params}&timeBucket=30m&priceBin=1`),
       get(fetchImpl, `${root}/v1/liquidations?${params}&bucket=30m`),
-      get(fetchImpl, `${root}/v1/liquidations/heatmap?${params}&timeBucket=5m&priceBin=10`),
+      getOptional(fetchImpl, `${root}/v1/liquidations/heatmap?${params}&timeBucket=5m&priceBin=10`),
     ]);
-    return json({ available: true, health, analytics: { asset, cvd: cvd.data ?? [], profile: profile.data ?? null, tpo: tpo.data ?? null, footprint: footprint.data ?? null, liquidations: { ...(liquidations.data ?? {}), heatmap: heatmap.data ?? null } } });
+    return json({ available: true, health, analytics: { asset, cvd: cvd.data ?? [], profile: profile.data ?? null, tpo: tpo.data ?? null, footprint: footprint.data ?? null, liquidations: { ...(liquidations.data ?? {}), heatmap: heatmap?.data ?? null } } });
   } catch (error) {
     return json({ available: false, health: null, analytics: null, error: error instanceof Error ? error.message : String(error) });
   }

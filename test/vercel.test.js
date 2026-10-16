@@ -50,6 +50,18 @@ test('Vercel collector function tolerates concurrent analytics queries over two 
   assert.equal(body.health.data.status, 'ok');
 });
 
+test('Vercel collector keeps legacy analytics live when heatmap route is not deployed yet', async () => {
+  const fetchImpl = async (url) => {
+    const path = new URL(url).pathname;
+    if (path === '/v1/liquidations/heatmap') return { ok: false, status: 404, json: async () => ({ error: 'route not found' }) };
+    return { ok: true, json: async () => (path === '/health' ? { data: { status: 'ok' } } : { data: {} }) };
+  };
+  const response = await collectorGET(new Request('https://skyterminal.test/api/collector?asset=BTC'), { baseUrl: 'http://collector.test', fetchImpl });
+  const body = await response.json();
+  assert.equal(body.available, true);
+  assert.equal(body.analytics.liquidations.heatmap, null);
+});
+
 test('Vercel market function rejects assets outside Market Intel universe', async () => {
   const response = await marketGET(new Request('https://skyterminal.test/api/market?coin=DOGE&interval=5m'));
   const body = await response.json();
