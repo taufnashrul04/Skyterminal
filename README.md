@@ -44,6 +44,13 @@ TRUST_PROXY=1 HOST=127.0.0.1 PORT=4173 npm start
 
 The repository includes Vercel Functions under `api/` and static rewrites in `vercel.json`.
 
+Before publishing, configure these Vercel environment variables:
+
+- `COLLECTOR_URL` — the collector's public HTTPS base URL. Do not use `127.0.0.1`; that would point to the Vercel runtime, not the AWS VPS.
+- `COLLECTOR_TIMEOUT_MS` — optional collector request timeout; defaults to `5000` ms because the six analytics queries run concurrently against SQLite.
+
+The collector must remain behind HTTPS, authentication, and request limits before exposing it outside the VPS. The Vercel `/api/collector` function is the browser-facing proxy; the browser never calls the collector directly.
+
 ```bash
 npx vercel
 npx vercel --prod

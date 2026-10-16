@@ -30,6 +30,26 @@ test('Vercel collector function returns explicit unavailable state without a con
   assert.match(body.error, /Collector URL/);
 });
 
+test('Vercel collector function tolerates concurrent analytics queries over two seconds', async () => {
+  const delayedFetch = async (url, options = {}) => {
+    await new Promise((resolve) => setTimeout(resolve, 2_100));
+    if (options.signal?.aborted) throw new DOMException('aborted', 'AbortError');
+    const path = new URL(url).pathname;
+    const data = path === '/health'
+      ? { data: { status: 'ok' } }
+      : { data: path === '/v1/cvd' ? [] : {} };
+    return { ok: true, json: async () => data };
+  };
+  const response = await collectorGET(
+    new Request('https://skyterminal.test/api/collector?asset=BTC'),
+    { baseUrl: 'http://collector.test', fetchImpl: delayedFetch },
+  );
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.available, true);
+  assert.equal(body.health.data.status, 'ok');
+});
+
 test('Vercel market function rejects assets outside Market Intel universe', async () => {
   const response = await marketGET(new Request('https://skyterminal.test/api/market?coin=DOGE&interval=5m'));
   const body = await response.json();
