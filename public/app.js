@@ -2,7 +2,7 @@ import { normalizePanelState, setPanelCollapsed } from './panel-state.js';
 
 const ASSETS = ['BTC', 'ETH', 'SOL', 'HYPE'];
 const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
-const state = { mode: 'market', asset: 'BTC', timeframe: '5m', market: null, collector: null, funding: null, mids: {}, matrix: {}, busy: false };
+const state = { mode: 'market', asset: 'BTC', timeframe: '5m', market: null, collector: null, funding: null, liquidations: null, mids: {}, matrix: {}, busy: false };
 let marketGeneration = 0;
 let matrixGeneration = 0;
 let fundingGeneration = 0;
@@ -79,7 +79,10 @@ function renderTabs() {
 
 function selectAsset(asset) {
   if (!ASSETS.includes(asset)) return;
-  state.asset = asset; state.matrix = {}; renderTabs(); loadAll();
+  state.asset = asset; state.matrix = {}; renderTabs();
+  if (state.mode === 'liquidation') loadLiquidations();
+  else if (state.mode === 'funding') loadFunding();
+  else loadAll();
 }
 function selectTimeframe(timeframe) {
   if (!TIMEFRAMES.includes(timeframe)) return;
@@ -87,17 +90,19 @@ function selectTimeframe(timeframe) {
 }
 
 function selectMode(mode) {
-  if (!['market', 'funding'].includes(mode)) return;
+  if (!['market', 'funding', 'liquidation'].includes(mode)) return;
   state.mode = mode;
   marketGeneration += 1;
   matrixGeneration += 1;
   fundingGeneration += 1;
   $('#marketDashboard').hidden = mode !== 'market';
   $('#fundingDashboard').hidden = mode !== 'funding';
-  $('#assetTabs').hidden = mode !== 'market';
+  $('#liquidationDashboard').hidden = mode !== 'liquidation';
+  $('#assetTabs').hidden = mode === 'funding';
   $('#timeframeTabs').hidden = mode !== 'market';
   document.querySelectorAll('[data-mode]').forEach((button) => button.classList.toggle('active', button.dataset.mode === mode));
   if (mode === 'funding') loadFunding();
+  else if (mode === 'liquidation') loadLiquidations();
   else loadAll();
 }
 
@@ -357,6 +362,44 @@ async function loadFunding() {
   }
 }
 
+function renderLiquidations(summary) {
+  state.liquidations = summary;
+  const analytics = summary?.analytics?.liquidations;
+  const totals = analytics?.totals;
+  const buckets = analytics?.buckets ?? [];
+  const health = summary?.health?.data;
+  $('#liquidationAsset').textContent = state.asset;
+  $('#liquidationAsOf').textContent = new Date().toLocaleString(undefined, { hour12: false });
+  $('#liquidationQuality').textContent = summary?.available ? 'LIVE' : 'OFFLINE';
+  $('#liquidationQuality').className = `quality ${summary?.available ? 'good' : 'bad'}`;
+  $('#liquidationCount').textContent = summary?.available ? `${buckets.length} WINDOWS` : 'NO DATA';
+  $('#liquidationSummary').innerHTML = [
+    ['TOTAL LIQUIDATED', totals?.total ?? '—', 'SELECTED ASSET / 15M WINDOW'],
+    ['LONG POSITIONS', totals?.long ?? '—', 'POSITION SIDE'],
+    ['SHORT POSITIONS', totals?.short ?? '—', 'POSITION SIDE'],
+    ['EXPECTED PRESSURE', totals?.netExpectedPressure ?? '—', 'PRESENTATION METADATA'],
+  ].map(([label, value, detail]) => `<article><span>${label}</span><strong>${esc(value)}</strong><small>${detail}</small></article>`).join('');
+  $('#liquidationRows').innerHTML = buckets.length
+    ? [...buckets].reverse().map((bucket) => `<tr><td>${new Date(bucket.startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${new Date(bucket.endMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td><td class="negative">${esc(bucket.long)}</td><td class="positive">${esc(bucket.short)}</td><td>${esc(bucket.unknown)}</td><td><strong>${esc(bucket.total)}</strong></td><td>${esc(bucket.netExpectedPressure)}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty-cell">NO LIQUIDATION DATA AVAILABLE</td></tr>';
+  if (health?.status === 'ok') setStatus(`${state.asset} LIQUIDATIONS UPDATED`, 'live');
+}
+
+async function loadLiquidations() {
+  const generation = ++fundingGeneration;
+  setStatus(`SYNCING ${state.asset} LIQUIDATIONS…`, 'pending');
+  try {
+    const data = await getJSON(`/api/collector?asset=${state.asset}`);
+    if (generation !== fundingGeneration || state.mode !== 'liquidation') return;
+    renderLiquidations(data);
+  } catch (error) {
+    if (generation === fundingGeneration && state.mode === 'liquidation') {
+      renderLiquidations({ available: false, error: error.message });
+      setStatus(error.message, 'error');
+    }
+  }
+}
+
 function loadAll() { loadMarket(); loadOverview(); loadMatrix(); }
 
 function runCommand(raw) {
@@ -365,8 +408,9 @@ function runCommand(raw) {
   else if (cmd === 'timeframe') selectTimeframe(String(value).toLowerCase());
   else if (cmd === 'mode') selectMode(String(value).toLowerCase());
   else if (cmd === 'funding') selectMode('funding');
+  else if (cmd === 'liquidation' || cmd === 'liquidations') selectMode('liquidation');
   else if (cmd === 'market') selectMode('market');
-  else if (cmd === 'refresh') state.mode === 'funding' ? loadFunding() : loadAll();
+  else if (cmd === 'refresh') state.mode === 'funding' ? loadFunding() : state.mode === 'liquidation' ? loadLiquidations() : loadAll();
 }
 
 function filterFundingRows() {
@@ -405,3 +449,4 @@ setInterval(() => { if (state.mode === 'market') loadMarket(); }, 5_000);
 setInterval(() => { if (state.mode === 'market') loadOverview(); }, 5_000);
 setInterval(() => { if (state.mode === 'market') loadMatrix(); }, 60_000);
 setInterval(() => { if (state.mode === 'funding') loadFunding(); }, 30_000);
+setInterval(() => { if (state.mode === 'liquidation') loadLiquidations(); }, 30_000);

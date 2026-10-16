@@ -29,6 +29,7 @@
     <div class="mode-tabs">
       <button class="mode-tab active" data-mode="market">MARKET INTEL</button>
       <button class="mode-tab" data-mode="funding">FUNDING ARB</button>
+      <button class="mode-tab" data-mode="liquidation">LIQUIDATIONS</button>
     </div>
     <div class="asset-tabs" id="assetTabs"></div>
     <div class="timeframe-tabs" id="timeframeTabs"></div>
@@ -168,6 +169,28 @@
         <article><span>C</span><strong>COSTS SET BREAK-EVEN</strong><p>Dashboard assumes combined round-trip cost shown in the snapshot.</p></article>
         <article><span>D</span><strong>RATES CAN FLIP</strong><p>Annualized values are snapshots, not locked yields or guaranteed returns.</p></article>
       </div>
+    </section>
+  </main>
+
+  <main class="liquidation-dashboard" id="liquidationDashboard" hidden>
+    <section class="panel liquidation-hero">
+      <header class="panel-head">
+        <div><span class="eyebrow">CEX LIQUIDATION MONITOR</span><div class="instrument-line"><h1 id="liquidationAsset">BTC</h1><span class="arb-count" id="liquidationCount">—</span></div></div>
+        <div class="market-meta"><span id="liquidationAsOf">NO DATA</span><span class="quality pending" id="liquidationQuality">SYNCING</span></div>
+      </header>
+      <div class="liquidation-summary" id="liquidationSummary"></div>
+    </section>
+    <section class="panel liquidation-sources">
+      <header class="panel-head compact"><span class="eyebrow">LIQUIDATION SOURCES</span><span>PUBLIC FEEDS</span></header>
+      <div class="liquidation-source-note">BINANCE USD-M <b>forceOrder</b> · BYBIT LINEAR <b>allLiquidation</b> · OKX SWAP <b>liquidation-orders</b>. Hyperliquid liquidation is not included.</div>
+    </section>
+    <section class="panel liquidation-flow-panel">
+      <header class="panel-head compact"><span class="eyebrow">30M LIQUIDATION FLOW</span><span>GROSS VOLUME</span></header>
+      <div class="table-scroll"><table class="arb-table liquidation-table"><thead><tr><th>WINDOW</th><th>LONG</th><th>SHORT</th><th>UNKNOWN</th><th>TOTAL</th><th>EXPECTED PRESSURE</th></tr></thead><tbody id="liquidationRows"></tbody></table></div>
+    </section>
+    <section class="panel liquidation-doctrine">
+      <header class="panel-head compact"><span class="eyebrow">READ THIS DATA CORRECTLY</span><span>MONITOR ONLY</span></header>
+      <div class="doctrine-grid"><article><span>A</span><strong>NOT CVD</strong><p>Liquidations are forced-position events and are separate from aggressor trade flow.</p></article><article><span>B</span><strong>GROSS VOLUME</strong><p>Long and short totals show liquidated position side, not observed aggressor direction.</p></article><article><span>C</span><strong>VENUE SCOPE</strong><p>Current feeds cover Binance, Bybit, and OKX perpetual markets.</p></article><article><span>D</span><strong>DATA CAVEAT</strong><p>OKX swap size remains venue contract size until multiplier normalization is added.</p></article></div>
     </section>
   </main>
 

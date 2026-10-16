@@ -154,6 +154,10 @@ canvas { display: block; width: 100%; height: 100%; }
 .arb-controls input, .arb-controls select, .arb-controls button { border: 1px solid var(--line); background: #080c0e; color: var(--ink); padding: 6px 8px; outline: 0; font-size: 9px; }
 .arb-controls input { width: 130px; }.arb-controls select { min-width: 130px; }.arb-controls button { cursor: pointer; color: var(--signal); }
 .arb-controls input:focus, .arb-controls select:focus, .arb-controls button:hover { border-color: var(--signal); }
+.liquidation-dashboard { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); grid-template-areas: "hero sources" "flow flow" "doctrine doctrine"; gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
+.liquidation-hero { grid-area: hero; }.liquidation-sources { grid-area: sources; }.liquidation-flow-panel { grid-area: flow; }.liquidation-doctrine { grid-area: doctrine; }
+.liquidation-summary { display: grid; grid-template-columns: repeat(4, 1fr); }.liquidation-summary article { min-height: 104px; padding: 16px; border-right: 1px solid var(--line); }.liquidation-summary article:last-child { border-right: 0; }.liquidation-summary span, .liquidation-summary small { display: block; color: var(--muted); font-size: 9px; letter-spacing: .07em; }.liquidation-summary strong { display: block; margin: 13px 0 8px; font: 800 20px var(--sans); }
+.liquidation-source-note { padding: 18px; color: var(--muted); line-height: 1.7; font-size: 10px; }.liquidation-source-note b { color: var(--ice); font-weight: 500; }.liquidation-table td { min-width: 130px; }
 .statusbar { min-height: 29px; display: flex; align-items: center; gap: 20px; padding: 0 12px; color: var(--muted); font-size: 9px; position: sticky; bottom: 0; background: #080c0e; border-top: 1px solid var(--line); z-index: 8; }.statusbar span:first-child { margin-right: auto; }.statusbar b { color: var(--ink); font-weight: 500; }
 .command-dialog { width: min(620px, calc(100vw - 24px)); padding: 0; color: var(--ink); background: var(--surface); border: 1px solid var(--line-hot); box-shadow: 0 24px 80px #000; }.command-dialog::backdrop { background: rgba(0,0,0,.72); }.command-input-row { display: flex; gap: 10px; align-items: center; padding: 15px; border-bottom: 1px solid var(--line); color: var(--signal); }.command-input-row input { flex: 1; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 15px; }.command-help { display: flex; flex-wrap: wrap; gap: 7px; padding: 12px; }.command-help button { background: #0c1317; border: 1px solid var(--line); padding: 7px 10px; cursor: pointer; }.command-help button:hover { border-color: var(--signal); }
 .error-panel { color: var(--danger); }
@@ -162,6 +166,7 @@ canvas { display: block; width: 100%; height: 100%; }
   .terminal-grid, .funding-dashboard { grid-template-columns: 1fr; }
   .terminal-grid { grid-template-areas: "market" "regime" "timeframes" "flow" "risk" "exo" "universe" "doctrine"; }
   .funding-dashboard { grid-template-areas: "hero" "sources" "opportunities" "rates" "doctrine"; }
+  .liquidation-dashboard { grid-template-columns: 1fr; grid-template-areas: "hero" "sources" "flow" "doctrine"; }
   .exo-live-grid { grid-template-columns: 1fr; }.volume-profile { border-right: 0; border-bottom: 1px solid var(--line); }
   .funding-summary { grid-template-columns: repeat(2,1fr); }
   .timeframe-matrix, .universe-grid { overflow-x: auto; grid-template-columns: repeat(5, minmax(150px,1fr)); }.universe-grid { grid-template-columns: repeat(4,minmax(160px,1fr)); }
@@ -169,7 +174,7 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 @media (max-width: 620px) {
   .topbar { height: 44px; }.brand { font-size: 16px; }.market-nav { padding: 0; overflow-x: auto; }.asset-tabs, .timeframe-tabs, .mode-tabs { flex: 0 0 auto; }.tab, .mode-tab { min-height: 42px; }
-  .funding-summary, .source-grid { grid-template-columns: 1fr; }
+  .funding-summary, .source-grid, .liquidation-summary { grid-template-columns: 1fr; }
   .arb-head { align-items: flex-start !important; flex-direction: column; padding: 9px 10px !important; }
   .arb-controls { width: 100%; overflow-x: auto; padding-bottom: 2px; }
   .arb-controls input, .arb-controls select { flex: 0 0 125px; }
