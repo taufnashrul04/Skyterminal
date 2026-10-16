@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { GET as healthGET } from '../api/health.js';
 import { GET as marketGET } from '../api/market.js';
+import { GET as collectorGET } from '../api/collector.js';
 
 test('Vercel health function exposes split market universes', async () => {
   const response = await healthGET();
@@ -19,6 +20,14 @@ test('Vercel rewrites every browser module imported by the app', async () => {
   const rewrites = new Map(config.rewrites.map((item) => [item.source, item.destination]));
   assert.equal(rewrites.get('/app.js'), '/public/app.js');
   assert.equal(rewrites.get('/panel-state.js'), '/public/panel-state.js');
+});
+
+test('Vercel collector function returns explicit unavailable state without a configured URL', async () => {
+  const response = await collectorGET(new Request('https://skyterminal.test/api/collector?asset=BTC'), { baseUrl: '' });
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.available, false);
+  assert.match(body.error, /Collector URL/);
 });
 
 test('Vercel market function rejects assets outside Market Intel universe', async () => {
