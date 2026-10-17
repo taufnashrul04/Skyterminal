@@ -132,7 +132,7 @@ function selectMode(mode) {
   $('#workspaceControl').hidden = mode !== 'market';
   document.querySelectorAll('[data-mode]').forEach((button) => button.classList.toggle('active', button.dataset.mode === mode));
   if (mode === 'funding') loadFunding();
-  else if (mode === 'liquidation') loadLiquidations();
+  else if (mode === 'liquidation') { if (!state.market || state.market.asset !== state.asset) loadMarket(); loadLiquidations(); }
   else loadAll();
 }
 
@@ -456,13 +456,8 @@ function renderLiquidations(summary) {
 function renderLiquidationHeatmap(heatmap) {
   const buckets = heatmap?.buckets ?? [];
   const visible = (level) => state.liquidationSide === 'long' ? { ...level, total: level.long } : state.liquidationSide === 'short' ? { ...level, total: level.short } : level;
-  if (!buckets.length) {
-    $('#liquidationHeatmap').innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>';
-    return;
-  }
-  const maxColumns = 48;
-  const groupSize = Math.max(1, Math.ceil(buckets.length / maxColumns));
-  const displayBuckets = [];
+  if (!buckets.length) { $('#liquidationHeatmap').innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>'; return; }
+  const maxColumns = 64; const groupSize = Math.max(1, Math.ceil(buckets.length / maxColumns)); const displayBuckets = [];
   for (let start = 0; start < buckets.length; start += groupSize) {
     const group = buckets.slice(start, start + groupSize); const byPrice = new Map();
     group.forEach((bucket) => (bucket.levels ?? []).forEach((raw) => {
@@ -471,23 +466,26 @@ function renderLiquidationHeatmap(heatmap) {
     }));
     displayBuckets.push({ startMs: group[0].startMs, endMs: group.at(-1).endMs, levels: [...byPrice.values()] });
   }
-  const totalsByPrice = new Map();
-  displayBuckets.forEach((bucket) => bucket.levels.forEach((level) => totalsByPrice.set(level.price, (totalsByPrice.get(level.price) || 0) + level.total)));
-  const prices = [...totalsByPrice.entries()].sort((a, b) => b[1] - a[1]).slice(0, 18).map(([price]) => price).sort((a, b) => Number(b) - Number(a));
-  if (!prices.length) { $('#liquidationHeatmap').innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>'; return; }
-  const max = Math.max(...displayBuckets.flatMap((bucket) => bucket.levels.map((level) => level.total)), 1);
-  const header = `<div class="heatmap-corner">PRICE</div>${displayBuckets.map((bucket) => `<div class="heatmap-time">${new Date(bucket.startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`).join('')}`;
-  const rows = prices.map((price) => {
-    const cells = displayBuckets.map((bucket) => {
-      const level = bucket.levels.find((item) => String(item.price) === String(price));
-      if (!level || level.total <= 0) return '<div class="heatmap-cell empty"></div>';
-      const long = Number(level.long) || 0; const short = Number(level.short) || 0; const alpha = Math.min(.96, .12 + Math.sqrt(level.total / max) * .84);
-      const color = long > short * 1.15 ? `rgba(255,95,104,${alpha})` : short > long * 1.15 ? `rgba(98,230,167,${alpha})` : `rgba(255,190,85,${alpha})`;
-      return `<div class="heatmap-cell" style="background:${color}" title="${esc(price)} · total ${compactNumber(level.total)} · long ${compactNumber(level.long)} · short ${compactNumber(level.short)}"><span>${compactNumber(level.total)}</span></div>`;
-    }).join('');
-    return `<div class="heatmap-price">${fmtPrice(price)}</div>${cells}`;
-  }).join('');
-  $('#liquidationHeatmap').innerHTML = `<div class="heatmap-grid" style="--heat-columns:${displayBuckets.length}">${header}${rows}</div><div class="heatmap-legend"><span><i class="long"></i>LONG POSITIONS</span><span><i class="short"></i>SHORT POSITIONS</span><span><i class="mixed"></i>MIXED</span><small>${heatmap.method?.replaceAll('_', ' ') ?? 'ACTUAL EVENTS'} · ${displayBuckets.length} DISPLAY BUCKETS</small></div>`;
+  const allPrices = displayBuckets.flatMap((bucket) => bucket.levels.map((level) => Number(level.price))).filter(Number.isFinite);
+  if (!allPrices.length) { $('#liquidationHeatmap').innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>'; return; }
+  const minPrice = Math.min(...allPrices); const maxPrice = Math.max(...allPrices); const range = maxPrice - minPrice || Math.max(maxPrice * .01, 1); const maxTotal = Math.max(...displayBuckets.flatMap((bucket) => bucket.levels.map((level) => level.total)), 1);
+  const root = $('#liquidationHeatmap'); root.innerHTML = '<canvas id="liquidationChart" aria-label="Liquidation heatmap"></canvas><div class="heatmap-legend"><span><i class="liquidation-leverage"></i>LIQUIDATION LEVERAGE</span><span><i class="supercharts"></i>ACTUAL LIQUIDATION EVENTS</span><small>TIME × PRICE · EVENT-DERIVED</small></div>';
+  const canvas = $('#liquidationChart'); const { ctx, width, height } = resizeCanvas(canvas); const pad = { top: 10, right: 62, bottom: 32, left: 8 }; const plotW = width - pad.left - pad.right; const plotH = height - pad.top - pad.bottom;
+  const x = (index) => pad.left + (displayBuckets.length <= 1 ? plotW / 2 : index / (displayBuckets.length - 1) * plotW); const y = (price) => pad.top + ((maxPrice - Number(price)) / range) * plotH;
+  ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#330348'; ctx.fillRect(0, 0, width, height); ctx.fillStyle = 'rgba(131,30,160,.16)'; ctx.fillRect(pad.left, pad.top, plotW, plotH);
+  ctx.strokeStyle = 'rgba(165,104,190,.12)'; ctx.lineWidth = 1; ctx.font = '10px IBM Plex Mono, monospace'; ctx.textAlign = 'right'; ctx.fillStyle = '#b9b3c4';
+  for (let i = 0; i <= 6; i += 1) { const price = maxPrice - range * i / 6; const py = y(price); ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke(); ctx.fillText(fmtPrice(price), width - 7, py + 3); }
+  displayBuckets.forEach((bucket, index) => {
+    const left = index === 0 ? pad.left : x(index) - (x(1) - x(0)) / 2; const right = index === displayBuckets.length - 1 ? pad.left + plotW : x(index) + (x(1) - x(0)) / 2; const cellWidth = Math.max(2, right - left - 1);
+    bucket.levels.forEach((level) => {
+      if (level.total <= 0) return; const long = Number(level.long) || 0; const short = Number(level.short) || 0; const intensity = Math.min(1, level.total / maxTotal); const color = long > short * 1.15 ? [255, 71, 170] : short > long * 1.15 ? [39, 227, 165] : [222, 240, 53]; const alpha = .34 + intensity * .66; const bandH = Math.max(3, Math.min(10, 3 + intensity * 7));
+      ctx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},${alpha})`; ctx.shadowColor = `rgba(${color[0]},${color[1]},${color[2]},${intensity * .7})`; ctx.shadowBlur = intensity > .45 ? 8 : 0; ctx.fillRect(left, y(level.price) - bandH / 2, cellWidth, bandH); ctx.shadowBlur = 0;
+    });
+  });
+  const candles = state.market?.series?.candles ?? []; const startMs = buckets[0].startMs; const endMs = buckets.at(-1).endMs; const path = candles.filter((c) => Number(c.c) >= 0).map((c) => ({ price: Number(c.c), time: Number(c.t ?? c.time ?? c.startMs ?? 0) })).filter((c) => c.time >= startMs && c.time <= endMs && c.price >= minPrice - range * .12 && c.price <= maxPrice + range * .12);
+  if (path.length > 1) { ctx.save(); ctx.strokeStyle = '#7cf7ed'; ctx.lineWidth = 1.3; ctx.shadowColor = '#7cf7ed'; ctx.shadowBlur = 4; ctx.beginPath(); path.forEach((point, index) => { const px = pad.left + ((point.time - startMs) / Math.max(1, endMs - startMs)) * plotW; const py = y(point.price); if (index === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.stroke(); ctx.restore(); }
+  const live = Number(state.mids[state.asset]); if (Number.isFinite(live) && live >= minPrice && live <= maxPrice) { const py = y(live); ctx.strokeStyle = '#ffffff'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(pad.left + plotW, py, 3, 0, Math.PI * 2); ctx.fill(); }
+  ctx.textAlign = 'center'; ctx.fillStyle = '#b9b3c4'; const labels = Math.min(7, displayBuckets.length); for (let i = 0; i < labels; i += 1) { const index = Math.round(i * (displayBuckets.length - 1) / Math.max(1, labels - 1)); ctx.fillText(new Date(displayBuckets[index].startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), x(index), height - 11); }
 }
 
 async function loadLiquidations() {
