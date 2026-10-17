@@ -206,12 +206,24 @@ function renderExo(data) {
   $('#exoMetrics').innerHTML = cards.map(([label, value, detail, cls]) => `<article class="exo-card ${cls}"><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join('');
 }
 
+function renderLiveProfile(profile) {
+  const levels = profile?.levels ?? [];
+  if (!levels.length) return;
+  const maxVolume = Math.max(...levels.map((level) => Number(level.totalVolume) || 0), 1);
+  $('#volumeProfile').innerHTML = [...levels].reverse().map((level) => {
+    const isPoc = String(level.price) === String(profile.poc);
+    return `<div class="profile-row ${isPoc ? 'poc' : ''}"><span>${fmtPrice(level.price)}</span><div class="profile-bar"><i style="width:${clamp((Number(level.totalVolume) || 0) / maxVolume * 100, 0, 100)}%"></i></div><b>${isPoc ? 'POC' : compactNumber(level.totalVolume)}</b></div>`;
+  }).join('');
+  $('#profileMethodNote').textContent = 'LIVE TRADE PROFILE · LAST 60 SECONDS · POC RECALCULATES EVERY SECOND';
+}
+
 function renderCollectorSummary(summary) {
   state.collector = summary;
   if (!state.market) return;
   const existing = [...document.querySelectorAll('#exoLiveMetrics .collector-card')];
   existing.forEach((node) => node.remove());
   const health = summary?.available ? summary.health?.data : null;
+  renderLiveProfile(summary?.analytics?.profile);
   const rows = summary?.available ? [
     ['CVD — AGGREGATE SPOT + PERP', summary.analytics?.cvd?.buckets?.at(-1)?.close ?? 'N/A', 'BINANCE · BYBIT · OKX · HYPERLIQUID', 'collector-card'],
     ['TRUE PROFILE POC', summary.analytics?.profile?.poc ?? 'N/A', 'TRADE-AT-PRICE', 'collector-card'],
