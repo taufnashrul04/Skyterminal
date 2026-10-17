@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 const ASSETS = new Set(['BTC', 'ETH', 'SOL', 'HYPE']);
 const COLLECTOR_TIMEOUT_MS = Number(process.env.COLLECTOR_TIMEOUT_MS ?? 12_000);
 const COLLECTOR_API_TOKEN = process.env.COLLECTOR_API_TOKEN ?? '';
-const WINDOWS = { '15m': 15, '1h': 60, '4h': 240, '24h': 1440 };
+const WINDOWS = { '1m': 1, '15m': 15, '1h': 60, '4h': 240, '24h': 1440 };
 
 async function get(fetchImpl, url) {
   const headers = COLLECTOR_API_TOKEN ? { authorization: `Bearer ${COLLECTOR_API_TOKEN}` } : undefined;
@@ -41,6 +41,13 @@ export async function GET(request, options = {}) {
         getOptional(fetchImpl, `${root}/v1/liquidations/heatmap?${params}&timeBucket=5m&priceBin=10`),
       ]);
       return json({ available: true, health, analytics: { asset, liquidations: { ...(liquidations.data ?? {}), heatmap: heatmap?.data ?? null } } });
+    }
+    if (requestUrl.searchParams.get('scope') === 'live') {
+      const [health, live] = await Promise.all([
+        get(fetchImpl, `${root}/health`),
+        get(fetchImpl, `${root}/v1/live?${params}`),
+      ]);
+      return json({ available: true, health, analytics: { asset, ...(live.data ?? {}) } });
     }
     const [health, cvd, profile, tpo, footprint, liquidations, heatmap] = await Promise.all([
       get(fetchImpl, `${root}/health`),

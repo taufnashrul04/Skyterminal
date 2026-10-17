@@ -290,7 +290,7 @@ async function loadCollectorLive(asset = state.asset) {
   if (collectorLiveBusy) return;
   collectorLiveBusy = true;
   const generation = ++collectorGeneration;
-  try { const summary = await getJSON(`/api/collector?asset=${asset}`); if (generation === collectorGeneration && asset === state.asset && state.mode === 'market') renderCollectorSummary(summary); }
+  try { const summary = await getJSON(`/api/collector?asset=${asset}&window=1m&scope=live`); if (generation === collectorGeneration && asset === state.asset && state.mode === 'market') renderCollectorSummary(summary); }
   catch { if (generation === collectorGeneration && asset === state.asset && state.mode === 'market') renderCollectorSummary({ available: false, error: 'collector request failed' }); }
   finally { collectorLiveBusy = false; }
 }
@@ -514,4 +514,4 @@ setInterval(() => { if (state.mode === 'market') loadOverview(); }, 15_000);
 setInterval(() => { if (state.mode === 'market') loadMatrix(); }, 60_000);
 setInterval(() => { if (state.mode === 'funding') loadFunding(); }, 30_000);
 setInterval(() => { if (state.mode === 'liquidation') loadLiquidations(); }, 30_000);
-setInterval(() => { if (state.mode === 'market') loadCollectorLive(); }, 15_000);
+setInterval(() => { if (state.mode === 'market') loadCollectorLive(); }, 1_000);
