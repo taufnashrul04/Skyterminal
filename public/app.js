@@ -129,6 +129,7 @@ function selectMode(mode) {
   $('#liquidationDashboard').hidden = mode !== 'liquidation';
   $('#assetTabs').hidden = mode === 'funding';
   $('#timeframeTabs').hidden = mode !== 'market';
+  $('#workspaceControl').hidden = mode !== 'market';
   document.querySelectorAll('[data-mode]').forEach((button) => button.classList.toggle('active', button.dataset.mode === mode));
   if (mode === 'funding') loadFunding();
   else if (mode === 'liquidation') loadLiquidations();
