@@ -28,11 +28,20 @@ export async function GET(request, options = {}) {
   if (!baseUrl) return json({ available: false, health: null, analytics: null, error: 'Collector URL is not configured on Vercel' });
   const fetchImpl = options.fetchImpl ?? fetch;
   const now = Date.now();
-  const windowKey = new URL(request.url).searchParams.get('window') || '15m';
+  const requestUrl = new URL(request.url);
+  const windowKey = requestUrl.searchParams.get('window') || '15m';
   const windowMinutes = WINDOWS[windowKey] || WINDOWS['15m'];
   const params = `asset=${encodeURIComponent(asset)}&from=${now - windowMinutes * 60 * 1000}&to=${now}&bucket=1m`;
   try {
     const root = baseUrl.replace(/\/$/, '');
+    if (requestUrl.searchParams.get('scope') === 'liquidations') {
+      const [health, liquidations, heatmap] = await Promise.all([
+        get(fetchImpl, `${root}/health`),
+        get(fetchImpl, `${root}/v1/liquidations?${params}&bucket=30m`),
+        getOptional(fetchImpl, `${root}/v1/liquidations/heatmap?${params}&timeBucket=5m&priceBin=10`),
+      ]);
+      return json({ available: true, health, analytics: { asset, liquidations: { ...(liquidations.data ?? {}), heatmap: heatmap?.data ?? null } } });
+    }
     const [health, cvd, profile, tpo, footprint, liquidations, heatmap] = await Promise.all([
       get(fetchImpl, `${root}/health`),
       get(fetchImpl, `${root}/v1/cvd?${params}`),

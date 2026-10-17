@@ -408,7 +408,7 @@ function renderLiquidations(summary) {
   $('#liquidationQuality').className = `quality ${summary?.available ? 'good' : 'bad'}`;
   $('#liquidationCount').textContent = summary?.available ? `${buckets.length} WINDOWS` : 'NO DATA';
   $('#liquidationSummary').innerHTML = [
-    ['TOTAL LIQUIDATED', totals?.total ?? '—', 'SELECTED ASSET / 15M WINDOW'],
+    ['TOTAL LIQUIDATED', totals?.total ?? '—', `SELECTED ASSET / ${state.liquidationWindow.toUpperCase()} WINDOW`],
     ['LONG POSITIONS', totals?.long ?? '—', 'POSITION SIDE'],
     ['SHORT POSITIONS', totals?.short ?? '—', 'POSITION SIDE'],
     ['EXPECTED PRESSURE', totals?.netExpectedPressure ?? '—', 'PRESENTATION METADATA'],
@@ -451,7 +451,7 @@ async function loadLiquidations() {
   const generation = ++fundingGeneration;
   setStatus(`SYNCING ${state.asset} LIQUIDATIONS…`, 'pending');
   try {
-    const data = await getJSON(`/api/collector?asset=${state.asset}&window=${state.liquidationWindow}`);
+    const data = await getJSON(`/api/collector?asset=${state.asset}&window=${state.liquidationWindow}&scope=liquidations`);
     if (generation !== fundingGeneration || state.mode !== 'liquidation') return;
     renderLiquidations(data);
   } catch (error) {
