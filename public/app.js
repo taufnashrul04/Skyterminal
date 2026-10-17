@@ -167,7 +167,7 @@ function renderMarket(data) {
   $('#spread').textContent = `${m.spreadBps.toFixed(2)} BPS`;
   renderRisk(data);
   renderExo(data);
-  renderPriceChart($('#priceChart'), data.series.candles);
+  renderPriceChart($('#priceChart'), data.series.candles, state.mids[data.asset] ?? data.price);
   renderLineChart($('#deltaChart'), data.series.cumulativeDelta, m.bookImbalance >= 0 ? '#62e6a7' : '#ff5f68');
 }
 
@@ -247,11 +247,11 @@ function resizeCanvas(canvas) {
   const ctx = canvas.getContext('2d'); ctx.setTransform(ratio, 0, 0, ratio, 0, 0); return { ctx, width: rect.width, height: rect.height };
 }
 
-function renderPriceChart(canvas, candles) {
+function renderPriceChart(canvas, candles, livePrice = null) {
   const { ctx, width, height } = resizeCanvas(canvas); ctx.clearRect(0, 0, width, height);
   if (!candles?.length) return;
   const pad = { l: 14, r: 58, t: 22, b: 42 }; const volumeHeight = 62; const chartBottom = height - pad.b - volumeHeight;
-  const highs = candles.map((c) => c.h), lows = candles.map((c) => c.l); const max = Math.max(...highs), min = Math.min(...lows); const range = max - min || 1;
+  const highs = candles.map((c) => c.h), lows = candles.map((c) => c.l); const live = Number(livePrice); const max = Math.max(...highs, Number.isFinite(live) ? live : -Infinity), min = Math.min(...lows, Number.isFinite(live) ? live : Infinity); const range = max - min || 1;
   const step = (width - pad.l - pad.r) / candles.length; const body = Math.max(1, Math.min(7, step * .62)); const maxV = Math.max(...candles.map((c) => c.v), 1);
   const y = (price) => pad.t + ((max - price) / range) * (chartBottom - pad.t);
   candles.forEach((c, index) => {
@@ -260,6 +260,13 @@ function renderPriceChart(canvas, candles) {
     const top = Math.min(y(c.o), y(c.c)); const h = Math.max(1, Math.abs(y(c.o) - y(c.c))); ctx.fillRect(x - body / 2, top, body, h);
     ctx.globalAlpha = .28; const vh = (c.v / maxV) * (volumeHeight - 10); ctx.fillRect(x - body / 2, height - pad.b - vh, body, vh); ctx.globalAlpha = 1;
   });
+  if (Number.isFinite(live)) {
+    const liveY = y(live);
+    ctx.save(); ctx.strokeStyle = '#b7ff4a'; ctx.fillStyle = '#b7ff4a'; ctx.lineWidth = 1; ctx.setLineDash([5, 4]); ctx.globalAlpha = .85;
+    ctx.beginPath(); ctx.moveTo(pad.l, liveY); ctx.lineTo(width - pad.r, liveY); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(width - pad.r, liveY, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.font = '700 9px ui-monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#07100a'; ctx.fillRect(width - pad.r + 7, liveY - 9, pad.r - 10, 18); ctx.fillStyle = '#b7ff4a'; ctx.fillText(fmtPrice(live), width - pad.r + 11, liveY + 3); ctx.restore();
+  }
   ctx.fillStyle = '#7f9098'; ctx.font = '9px ui-monospace'; ctx.textAlign = 'left';
   for (let i = 0; i <= 4; i += 1) { const value = max - range * (i / 4); ctx.fillText(fmtPrice(value), width - pad.r + 7, y(value) + 3); }
 }
@@ -314,7 +321,7 @@ async function loadCollectorLive(asset = state.asset) {
 }
 
 async function loadOverview() {
-  try { const data = await getJSON('/api/overview'); state.mids = data.mids; renderUniverse(); }
+  try { const data = await getJSON('/api/overview'); state.mids = data.mids; renderUniverse(); if (state.market) renderPriceChart($('#priceChart'), state.market.series.candles, state.mids[state.asset] ?? state.market.price); }
   catch (error) { setStatus(error.message, 'error'); }
 }
 
@@ -538,12 +545,12 @@ function setupCommands() {
 }
 
 function tickClock() { $('#clock').textContent = `${new Date().toISOString().slice(11, 16)} UTC`; }
-window.addEventListener('resize', () => { if (state.market) { renderPriceChart($('#priceChart'), state.market.series.candles); renderLineChart($('#deltaChart'), state.market.series.cumulativeDelta, state.market.metrics.bookImbalance >= 0 ? '#62e6a7' : '#ff5f68'); } });
+window.addEventListener('resize', () => { if (state.market) { renderPriceChart($('#priceChart'), state.market.series.candles, state.mids[state.asset] ?? state.market.price); renderLineChart($('#deltaChart'), state.market.series.cumulativeDelta, state.market.metrics.bookImbalance >= 0 ? '#62e6a7' : '#ff5f68'); } });
 
 renderTabs(); renderMatrix(); renderUniverse(); setupCollapsiblePanels(); setupCommands(); tickClock(); loadAll();
 setInterval(tickClock, 30_000);
 setInterval(() => { if (state.mode === 'market') loadMarket(); }, 15_000);
-setInterval(() => { if (state.mode === 'market') loadOverview(); }, 15_000);
+setInterval(() => { if (state.mode === 'market') loadOverview(); }, 1_000);
 setInterval(() => { if (state.mode === 'market') loadMatrix(); }, 60_000);
 setInterval(() => { if (state.mode === 'funding') loadFunding(); }, 5_000);
 setInterval(() => { if (state.mode === 'liquidation') loadLiquidations(); }, 1_000);
