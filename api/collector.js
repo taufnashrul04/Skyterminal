@@ -3,9 +3,11 @@ import { json } from './_response.js';
 export const runtime = 'nodejs';
 const ASSETS = new Set(['BTC', 'ETH', 'SOL', 'HYPE']);
 const COLLECTOR_TIMEOUT_MS = Number(process.env.COLLECTOR_TIMEOUT_MS ?? 12_000);
+const COLLECTOR_API_TOKEN = process.env.COLLECTOR_API_TOKEN ?? '';
 
 async function get(fetchImpl, url) {
-  const response = await fetchImpl(url, { cache: 'no-store', signal: AbortSignal.timeout(COLLECTOR_TIMEOUT_MS) });
+  const headers = COLLECTOR_API_TOKEN ? { authorization: `Bearer ${COLLECTOR_API_TOKEN}` } : undefined;
+  const response = await fetchImpl(url, { cache: 'no-store', headers, signal: AbortSignal.timeout(COLLECTOR_TIMEOUT_MS) });
   const body = await response.json();
   if (!response.ok) throw new Error(body?.error || `Collector HTTP ${response.status}`);
   return body;
