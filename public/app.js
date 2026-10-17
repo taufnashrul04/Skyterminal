@@ -17,6 +17,8 @@ const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m'
 let marketGeneration = 0;
 let matrixGeneration = 0;
 let fundingGeneration = 0;
+let collectorGeneration = 0;
+let collectorLiveBusy = false;
 
 const $ = (selector) => document.querySelector(selector);
 const fmtPrice = (value) => Number(value).toLocaleString('en-US', { minimumFractionDigits: Number(value) < 100 ? 2 : 1, maximumFractionDigits: Number(value) < 10 ? 4 : 2 });
@@ -206,7 +208,7 @@ function renderExo(data) {
 function renderCollectorSummary(summary) {
   state.collector = summary;
   if (!state.market) return;
-  const existing = [...document.querySelectorAll('#exoMetrics .collector-card')];
+  const existing = [...document.querySelectorAll('#exoLiveMetrics .collector-card')];
   existing.forEach((node) => node.remove());
   const health = summary?.available ? summary.health?.data : null;
   const rows = summary?.available ? [
@@ -217,7 +219,7 @@ function renderCollectorSummary(summary) {
     ['OKX LIQUIDATIONS', (() => { const source = health?.sources?.find((item) => item.source === 'okx-liquidations'); return source?.status === 'connected' ? 'CONNECTED' : source?.last_event_us ? 'DEGRADED' : 'NO RECENT EVENTS'; })(), 'SWAP · LIQUIDATION-ORDERS', 'collector-card'],
     ['COLLECTOR STATUS', health?.status?.toUpperCase() ?? 'ONLINE', `${health?.counts?.trades ?? 0} TRADES STORED`, 'collector-card'],
   ] : [['COLLECTOR STATUS', 'OFFLINE', summary?.error ? 'LOCAL COLLECTOR UNAVAILABLE' : 'WAITING FOR DATA', 'collector-card proxy']];
-  $('#exoMetrics').insertAdjacentHTML('beforeend', rows.map(([label, value, detail, cls]) => `<article class="exo-card ${cls}"><span>${label}</span><strong>${esc(value)}</strong><small>${esc(detail)}</small></article>`).join(''));
+  $('#exoLiveMetrics').innerHTML = rows.map(([label, value, detail, cls]) => `<article class="exo-card ${cls}"><span>${label}</span><strong>${esc(value)}</strong><small>${esc(detail)}</small></article>`).join('');
 }
 
 function resizeCanvas(canvas) {
@@ -278,11 +280,20 @@ async function loadMarket() {
     renderMarket(data);
     state.matrix[timeframe] = data;
     renderMatrix();
-    getJSON(`/api/collector?asset=${asset}`).then(renderCollectorSummary).catch(() => renderCollectorSummary({ available: false, error: 'collector request failed' }));
+    loadCollectorLive(asset);
     setStatus(`${asset} ${timeframe.toUpperCase()} UPDATED`, 'live');
   } catch (error) {
     if (generation === marketGeneration && state.mode === 'market') setStatus(error.message, 'error');
   }
+}
+
+async function loadCollectorLive(asset = state.asset) {
+  if (collectorLiveBusy) return;
+  collectorLiveBusy = true;
+  const generation = ++collectorGeneration;
+  try { const summary = await getJSON(`/api/collector?asset=${asset}`); if (generation === collectorGeneration && asset === state.asset && state.mode === 'market') renderCollectorSummary(summary); }
+  catch { if (generation === collectorGeneration && asset === state.asset && state.mode === 'market') renderCollectorSummary({ available: false, error: 'collector request failed' }); }
+  finally { collectorLiveBusy = false; }
 }
 
 async function loadOverview() {
@@ -451,7 +462,7 @@ async function loadLiquidations() {
   }
 }
 
-function loadAll() { loadMarket(); loadOverview(); loadMatrix(); }
+function loadAll() { loadMarket(); loadOverview(); loadMatrix(); loadCollectorLive(); }
 
 function runCommand(raw) {
   const [command, value] = raw.trim().split(/\s+/); const cmd = command?.toLowerCase();
@@ -504,3 +515,4 @@ setInterval(() => { if (state.mode === 'market') loadOverview(); }, 15_000);
 setInterval(() => { if (state.mode === 'market') loadMatrix(); }, 60_000);
 setInterval(() => { if (state.mode === 'funding') loadFunding(); }, 30_000);
 setInterval(() => { if (state.mode === 'liquidation') loadLiquidations(); }, 30_000);
+setInterval(() => { if (state.mode === 'market') loadCollectorLive(); }, 1_000);
