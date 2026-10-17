@@ -140,6 +140,7 @@
         <span class="eyebrow">DELTA-NEUTRAL ROUTES</span>
         <div class="arb-controls">
           <input id="arbPairSearch" type="search" placeholder="SEARCH PAIR" autocomplete="off">
+          <select id="fundingHorizon" aria-label="Funding estimate horizon"><option value="1">NET 1H</option><option value="4" selected>NET 4H</option><option value="8">NET 8H</option></select>
           <select id="arbVenueA" aria-label="First venue"><option value="">ANY VENUE A</option></select>
           <select id="arbVenueB" aria-label="Second venue"><option value="">ANY VENUE B</option></select>
           <button id="arbReset" type="button">RESET</button>
@@ -147,7 +148,7 @@
       </header>
       <div class="table-scroll">
         <table class="arb-table">
-          <thead><tr><th>PAIR</th><th>LONG / RECEIVE LOW</th><th>SHORT / RECEIVE HIGH</th><th>SPREAD 1H</th><th>ANNUALIZED</th><th>$/DAY PER $1K</th><th>NET $/1K @4H</th><th>BREAK-EVEN</th><th>PRICE GAP</th><th>GRADE</th></tr></thead>
+          <thead><tr><th>PAIR</th><th>LONG / RECEIVE LOW</th><th>SHORT / RECEIVE HIGH</th><th>SPREAD 1H</th><th>ANNUALIZED</th><th>$/DAY PER $1K</th><th id="fundingNetHeader">NET $/1K @4H</th><th>BREAK-EVEN</th><th>PRICE GAP</th><th>GRADE</th></tr></thead>
           <tbody id="opportunityRows"></tbody>
         </table>
       </div>

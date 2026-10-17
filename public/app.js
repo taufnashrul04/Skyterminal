@@ -13,7 +13,7 @@ const WORKSPACES = {
   'range-charting': { label: 'RANGE CHARTING', mode: 'market', asset: 'BTC', timeframe: '5m' },
   'tpo-volume': { label: 'TPO / VOLUME PROFILE', mode: 'market', asset: 'BTC', timeframe: '1h' },
 };
-const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '24h', liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, mids: {}, matrix: {}, busy: false };
+const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '24h', fundingHorizon: 4, liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, mids: {}, matrix: {}, busy: false };
 let marketGeneration = 0;
 let matrixGeneration = 0;
 let fundingGeneration = 0;
@@ -311,14 +311,20 @@ async function loadMatrix() {
   renderMatrix(); $('#matrixStatus').textContent = `${Object.keys(state.matrix).length}/5 ONLINE`;
 }
 
+function netEstimatePer1000(item, hours = state.fundingHorizon) {
+  const cost = Number(state.funding?.roundTripCostBps ?? 0) / 10_000 * 1_000;
+  return Number((Number(item.grossRate1h) * hours * 1_000 - cost).toFixed(2));
+}
+
 function opportunityRow(item) {
+  const net = netEstimatePer1000(item);
   return `<tr>
     <td><strong>${esc(item.pair)}</strong></td>
     <td><span class="venue">${esc(item.longDex)}</span><small>${pct(item.longRate1h, 4)} / 1H</small></td>
     <td><span class="venue">${esc(item.shortDex)}</span><small>${pct(item.shortRate1h, 4)} / 1H</small></td>
     <td class="positive">${pct(item.grossRate1h, 4)}</td>
     <td><strong>${item.grossAnnualizedPct.toFixed(1)}%</strong></td>
-    <td class="${item.netReturn4hPer1000 >= 0 ? 'positive' : 'negative'}">$${Number(item.netReturn4hPer1000 ?? 0).toFixed(2)}</td>
+    <td class="${net >= 0 ? 'positive' : 'negative'}">$${net.toFixed(2)}</td>
     <td>${item.breakEvenHours.toFixed(1)}H</td>
     <td class="${item.priceDivergenceBps != null && item.priceDivergenceBps > 100 ? 'negative' : ''}">${item.priceDivergenceBps == null ? (item.priceRisk === 'ORACLE_PRICE_ONLY' ? 'ORACLE ONLY' : 'PRICE N/A') : `${item.priceDivergenceBps.toFixed(1)} BPS`}</td>
     <td><span class="grade ${esc(item.confidence)}">${esc(item.confidence).toUpperCase()}</span></td>
@@ -363,8 +369,11 @@ function renderFunding(data) {
   $('#fundingAsOf').textContent = new Date(data.asOf).toLocaleString(undefined, { hour12: false });
   $('#fundingQuality').textContent = `${online}/${Object.keys(data.sources ?? {}).length} VENUES`;
   $('#fundingQuality').className = `quality ${online >= 2 ? 'good' : 'bad'}`;
+  const horizon = state.fundingHorizon;
+  const bestNet = best ? netEstimatePer1000(best, horizon) : null;
+  $('#fundingNetHeader').textContent = `NET $/1K @${horizon}H`;
   $('#fundingSummary').innerHTML = [
-    ['BEST GROSS APR', best ? `${best.grossAnnualizedPct.toFixed(1)}%` : '—', best ? `NET @4H $${Number(best.netReturn4hPer1000 ?? 0).toFixed(2)} / $1K` : 'NO CROSS-VENUE MATCH'],
+    ['BEST GROSS APR', best ? `${best.grossAnnualizedPct.toFixed(1)}%` : '—', best ? `NET @${horizon}H $${bestNet.toFixed(2)} / $1K` : 'NO CROSS-VENUE MATCH'],
     ['BEST ROUTE', best ? `${esc(best.longDex)} → ${esc(best.shortDex)}` : '—', best ? `LONG ${best.pair} / SHORT ${best.pair}` : 'WAITING FOR DATA'],
     ['COST ASSUMPTION', `${Number(data.roundTripCostBps ?? 0).toFixed(0)} BPS`, data.costModel ?? 'FEES + ESTIMATED SPREAD'],
     ['LIVE MARKETS', String(markets.length), `${online} SOURCES ONLINE`],
@@ -496,6 +505,7 @@ function setupCommands() {
   $('#liquidationWindow').addEventListener('change', (event) => { state.liquidationWindow = event.target.value; if (state.mode === 'liquidation') loadLiquidations(); });
   document.querySelectorAll('[data-liq-side]').forEach((button) => button.addEventListener('click', () => { state.liquidationSide = button.dataset.liqSide; document.querySelectorAll('[data-liq-side]').forEach((item) => item.classList.toggle('active', item === button)); renderLiquidationHeatmap(state.liquidations?.analytics?.liquidations?.heatmap); }));
   $('#fundingFilter').addEventListener('input', filterFundingRows);
+  $('#fundingHorizon').addEventListener('change', (event) => { state.fundingHorizon = Number(event.target.value); if (state.funding) { const best = state.funding.opportunities?.[0] ?? state.funding.routes?.[0]; const horizon = state.fundingHorizon; $('#fundingNetHeader').textContent = `NET $/1K @${horizon}H`; $('#fundingSummary').querySelector('article small').textContent = best ? `NET @${horizon}H $${netEstimatePer1000(best, horizon).toFixed(2)} / $1K` : 'NO CROSS-VENUE MATCH'; renderOpportunityRoutes(); } });
   $('#arbPairSearch').addEventListener('input', renderOpportunityRoutes);
   $('#arbVenueA').addEventListener('change', renderOpportunityRoutes);
   $('#arbVenueB').addEventListener('change', renderOpportunityRoutes);
