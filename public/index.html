@@ -187,7 +187,7 @@
       <div class="liquidation-source-note">BINANCE USD-M <b>forceOrder</b> · BYBIT LINEAR <b>allLiquidation</b> · OKX SWAP <b>liquidation-orders</b>. Hyperliquid liquidation is not included.</div>
     </section>
     <section class="panel liquidation-flow-panel">
-      <header class="panel-head compact liquidation-head"><span class="eyebrow">ACTUAL LIQUIDATION HEATMAP</span><div class="liquidation-controls"><select id="liquidationWindow" aria-label="Liquidation window"><option value="15m">15M</option><option value="1h">1H</option><option value="4h">4H</option><option value="24h">24H</option></select><button class="liq-filter active" data-liq-side="all">ALL</button><button class="liq-filter" data-liq-side="long">LONG</button><button class="liq-filter" data-liq-side="short">SHORT</button></div></header>
+      <header class="panel-head compact liquidation-head"><span class="eyebrow">ACTUAL LIQUIDATION HEATMAP</span><div class="liquidation-controls"><select id="liquidationWindow" aria-label="Liquidation window"><option value="24h" selected>24H</option><option value="4h">4H</option><option value="1h">1H</option><option value="15m">15M</option></select><button class="liq-filter active" data-liq-side="all">ALL</button><button class="liq-filter" data-liq-side="long">LONG</button><button class="liq-filter" data-liq-side="short">SHORT</button></div></header>
       <div class="liquidation-heatmap" id="liquidationHeatmap"></div>
       <div class="table-scroll"><table class="arb-table liquidation-table"><thead><tr><th>WINDOW</th><th>LONG</th><th>SHORT</th><th>UNKNOWN</th><th>TOTAL</th><th>EXPECTED PRESSURE</th></tr></thead><tbody id="liquidationRows"></tbody></table></div>
     </section>
