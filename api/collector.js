@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 const ASSETS = new Set(['BTC', 'ETH', 'SOL', 'HYPE']);
 const COLLECTOR_TIMEOUT_MS = Number(process.env.COLLECTOR_TIMEOUT_MS ?? 12_000);
 const COLLECTOR_API_TOKEN = process.env.COLLECTOR_API_TOKEN ?? '';
+const WINDOWS = { '15m': 15, '1h': 60, '4h': 240, '24h': 1440 };
 
 async function get(fetchImpl, url) {
   const headers = COLLECTOR_API_TOKEN ? { authorization: `Bearer ${COLLECTOR_API_TOKEN}` } : undefined;
@@ -27,7 +28,9 @@ export async function GET(request, options = {}) {
   if (!baseUrl) return json({ available: false, health: null, analytics: null, error: 'Collector URL is not configured on Vercel' });
   const fetchImpl = options.fetchImpl ?? fetch;
   const now = Date.now();
-  const params = `asset=${encodeURIComponent(asset)}&from=${now - 15 * 60 * 1000}&to=${now}&bucket=1m`;
+  const windowKey = new URL(request.url).searchParams.get('window') || '15m';
+  const windowMinutes = WINDOWS[windowKey] || WINDOWS['15m'];
+  const params = `asset=${encodeURIComponent(asset)}&from=${now - windowMinutes * 60 * 1000}&to=${now}&bucket=1m`;
   try {
     const root = baseUrl.replace(/\/$/, '');
     const [health, cvd, profile, tpo, footprint, liquidations, heatmap] = await Promise.all([

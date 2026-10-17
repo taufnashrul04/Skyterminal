@@ -13,7 +13,7 @@ const WORKSPACES = {
   'range-charting': { label: 'RANGE CHARTING', mode: 'market', asset: 'BTC', timeframe: '5m' },
   'tpo-volume': { label: 'TPO / VOLUME PROFILE', mode: 'market', asset: 'BTC', timeframe: '1h' },
 };
-const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', market: null, collector: null, funding: null, liquidations: null, mids: {}, matrix: {}, busy: false };
+const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '15m', liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, mids: {}, matrix: {}, busy: false };
 let marketGeneration = 0;
 let matrixGeneration = 0;
 let fundingGeneration = 0;
@@ -411,8 +411,9 @@ function renderLiquidations(summary) {
 
 function renderLiquidationHeatmap(heatmap) {
   const buckets = heatmap?.buckets ?? [];
-  const prices = [...new Set(buckets.flatMap((bucket) => (bucket.levels ?? []).map((level) => level.price)))].sort((a, b) => Number(b) - Number(a));
-  const max = Math.max(...buckets.flatMap((bucket) => (bucket.levels ?? []).map((level) => Number(level.total))), 1);
+  const visible = (level) => state.liquidationSide === 'long' ? { ...level, total: level.long } : state.liquidationSide === 'short' ? { ...level, total: level.short } : level;
+  const prices = [...new Set(buckets.flatMap((bucket) => (bucket.levels ?? []).filter((level) => Number(visible(level).total) > 0).map((level) => level.price)))].sort((a, b) => Number(b) - Number(a));
+  const max = Math.max(...buckets.flatMap((bucket) => (bucket.levels ?? []).map((level) => Number(visible(level).total))), 1);
   if (!buckets.length || !prices.length) {
     $('#liquidationHeatmap').innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>';
     return;
@@ -420,7 +421,8 @@ function renderLiquidationHeatmap(heatmap) {
   const header = `<div class="heatmap-corner">PRICE</div>${buckets.map((bucket) => `<div class="heatmap-time">${new Date(bucket.startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`).join('')}`;
   const rows = prices.map((price) => {
     const cells = buckets.map((bucket) => {
-      const level = (bucket.levels ?? []).find((item) => item.price === price);
+      const raw = (bucket.levels ?? []).find((item) => item.price === price);
+      const level = raw ? visible(raw) : null;
       if (!level) return '<div class="heatmap-cell empty"></div>';
       const total = Number(level.total) || 0;
       const long = Number(level.long) || 0;
@@ -438,7 +440,7 @@ async function loadLiquidations() {
   const generation = ++fundingGeneration;
   setStatus(`SYNCING ${state.asset} LIQUIDATIONS…`, 'pending');
   try {
-    const data = await getJSON(`/api/collector?asset=${state.asset}`);
+    const data = await getJSON(`/api/collector?asset=${state.asset}&window=${state.liquidationWindow}`);
     if (generation !== fundingGeneration || state.mode !== 'liquidation') return;
     renderLiquidations(data);
   } catch (error) {
@@ -478,6 +480,8 @@ function setupCommands() {
   document.querySelectorAll('[data-command]').forEach((button) => button.addEventListener('click', () => runCommand(button.dataset.command)));
   document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => selectMode(button.dataset.mode)));
   $('#workspaceSelect').addEventListener('change', (event) => selectWorkspace(event.target.value));
+  $('#liquidationWindow').addEventListener('change', (event) => { state.liquidationWindow = event.target.value; if (state.mode === 'liquidation') loadLiquidations(); });
+  document.querySelectorAll('[data-liq-side]').forEach((button) => button.addEventListener('click', () => { state.liquidationSide = button.dataset.liqSide; document.querySelectorAll('[data-liq-side]').forEach((item) => item.classList.toggle('active', item === button)); renderLiquidationHeatmap(state.liquidations?.analytics?.liquidations?.heatmap); }));
   $('#fundingFilter').addEventListener('input', filterFundingRows);
   $('#arbPairSearch').addEventListener('input', renderOpportunityRoutes);
   $('#arbVenueA').addEventListener('change', renderOpportunityRoutes);
@@ -490,13 +494,13 @@ function setupCommands() {
   });
 }
 
-function tickClock() { $('#clock').textContent = `${new Date().toISOString().slice(11, 19)} UTC`; }
+function tickClock() { $('#clock').textContent = `${new Date().toISOString().slice(11, 16)} UTC`; }
 window.addEventListener('resize', () => { if (state.market) { renderPriceChart($('#priceChart'), state.market.series.candles); renderLineChart($('#deltaChart'), state.market.series.cumulativeDelta, state.market.metrics.bookImbalance >= 0 ? '#62e6a7' : '#ff5f68'); } });
 
 renderTabs(); renderMatrix(); renderUniverse(); setupCollapsiblePanels(); setupCommands(); tickClock(); loadAll();
-setInterval(tickClock, 1_000);
-setInterval(() => { if (state.mode === 'market') loadMarket(); }, 5_000);
-setInterval(() => { if (state.mode === 'market') loadOverview(); }, 5_000);
+setInterval(tickClock, 30_000);
+setInterval(() => { if (state.mode === 'market') loadMarket(); }, 15_000);
+setInterval(() => { if (state.mode === 'market') loadOverview(); }, 15_000);
 setInterval(() => { if (state.mode === 'market') loadMatrix(); }, 60_000);
 setInterval(() => { if (state.mode === 'funding') loadFunding(); }, 30_000);
 setInterval(() => { if (state.mode === 'liquidation') loadLiquidations(); }, 30_000);
