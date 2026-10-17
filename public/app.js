@@ -280,7 +280,6 @@ async function loadMarket() {
     renderMarket(data);
     state.matrix[timeframe] = data;
     renderMatrix();
-    loadCollectorLive(asset);
     setStatus(`${asset} ${timeframe.toUpperCase()} UPDATED`, 'live');
   } catch (error) {
     if (generation === marketGeneration && state.mode === 'market') setStatus(error.message, 'error');
@@ -515,4 +514,4 @@ setInterval(() => { if (state.mode === 'market') loadOverview(); }, 15_000);
 setInterval(() => { if (state.mode === 'market') loadMatrix(); }, 60_000);
 setInterval(() => { if (state.mode === 'funding') loadFunding(); }, 30_000);
 setInterval(() => { if (state.mode === 'liquidation') loadLiquidations(); }, 30_000);
-setInterval(() => { if (state.mode === 'market') loadCollectorLive(); }, 1_000);
+setInterval(() => { if (state.mode === 'market') loadCollectorLive(); }, 15_000);
