@@ -19,6 +19,7 @@ let matrixGeneration = 0;
 let fundingGeneration = 0;
 let collectorGeneration = 0;
 let collectorLiveBusy = false;
+let liquidationBusy = false;
 
 const $ = (selector) => document.querySelector(selector);
 const fmtPrice = (value) => Number(value).toLocaleString('en-US', { minimumFractionDigits: Number(value) < 100 ? 2 : 1, maximumFractionDigits: Number(value) < 10 ? 4 : 2 });
@@ -317,7 +318,7 @@ function opportunityRow(item) {
     <td><span class="venue">${esc(item.shortDex)}</span><small>${pct(item.shortRate1h, 4)} / 1H</small></td>
     <td class="positive">${pct(item.grossRate1h, 4)}</td>
     <td><strong>${item.grossAnnualizedPct.toFixed(1)}%</strong></td>
-    <td>${compactUSD(item.estimatedDailyPer1000)}</td>
+    <td class="${item.netReturn4hPer1000 >= 0 ? 'positive' : 'negative'}">$${Number(item.netReturn4hPer1000 ?? 0).toFixed(2)}</td>
     <td>${item.breakEvenHours.toFixed(1)}H</td>
     <td class="${item.priceDivergenceBps != null && item.priceDivergenceBps > 100 ? 'negative' : ''}">${item.priceDivergenceBps == null ? (item.priceRisk === 'ORACLE_PRICE_ONLY' ? 'ORACLE ONLY' : 'PRICE N/A') : `${item.priceDivergenceBps.toFixed(1)} BPS`}</td>
     <td><span class="grade ${esc(item.confidence)}">${esc(item.confidence).toUpperCase()}</span></td>
@@ -350,7 +351,7 @@ function renderOpportunityRoutes() {
   $('#arbCount').textContent = `${routes.length} ROUTES`;
   $('#opportunityRows').innerHTML = routes.length
     ? routes.map(opportunityRow).join('')
-    : '<tr><td colspan="9" class="empty-cell">NO ROUTE MATCHES THE SELECTED VENUES / PAIR</td></tr>';
+    : '<tr><td colspan="10" class="empty-cell">NO ROUTE MATCHES THE SELECTED VENUES / PAIR</td></tr>';
 }
 
 function renderFunding(data) {
@@ -363,9 +364,9 @@ function renderFunding(data) {
   $('#fundingQuality').textContent = `${online}/${Object.keys(data.sources ?? {}).length} VENUES`;
   $('#fundingQuality').className = `quality ${online >= 2 ? 'good' : 'bad'}`;
   $('#fundingSummary').innerHTML = [
-    ['BEST GROSS APR', best ? `${best.grossAnnualizedPct.toFixed(1)}%` : '—', best?.pair ?? 'NO CROSS-VENUE MATCH'],
+    ['BEST GROSS APR', best ? `${best.grossAnnualizedPct.toFixed(1)}%` : '—', best ? `NET @4H $${Number(best.netReturn4hPer1000 ?? 0).toFixed(2)} / $1K` : 'NO CROSS-VENUE MATCH'],
     ['BEST ROUTE', best ? `${esc(best.longDex)} → ${esc(best.shortDex)}` : '—', best ? `LONG ${best.pair} / SHORT ${best.pair}` : 'WAITING FOR DATA'],
-    ['COST ASSUMPTION', `${Number(data.roundTripCostBps ?? 0).toFixed(0)} BPS`, 'COMBINED ROUND-TRIP'],
+    ['COST ASSUMPTION', `${Number(data.roundTripCostBps ?? 0).toFixed(0)} BPS`, data.costModel ?? 'FEES + ESTIMATED SPREAD'],
     ['LIVE MARKETS', String(markets.length), `${online} SOURCES ONLINE`],
   ].map(([label, value, detail]) => `<article><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join('');
   $('#sourceGrid').innerHTML = Object.entries(data.sources ?? {}).map(([name, source]) => `<div class="source-card ${source.status}"><span class="source-led"></span><div><strong>${esc(name)}</strong><small>${esc(source.status).toUpperCase()} · ${Number(source.markets ?? 0)} MARKETS</small></div></div>`).join('');
@@ -447,6 +448,8 @@ function renderLiquidationHeatmap(heatmap) {
 }
 
 async function loadLiquidations() {
+  if (liquidationBusy) return;
+  liquidationBusy = true;
   const generation = ++fundingGeneration;
   setStatus(`SYNCING ${state.asset} LIQUIDATIONS…`, 'pending');
   try {
@@ -458,7 +461,7 @@ async function loadLiquidations() {
       renderLiquidations({ available: false, error: error.message });
       setStatus(error.message, 'error');
     }
-  }
+  } finally { liquidationBusy = false; }
 }
 
 function loadAll() { loadMarket(); loadOverview(); loadMatrix(); loadCollectorLive(); }
@@ -512,6 +515,6 @@ setInterval(tickClock, 30_000);
 setInterval(() => { if (state.mode === 'market') loadMarket(); }, 15_000);
 setInterval(() => { if (state.mode === 'market') loadOverview(); }, 15_000);
 setInterval(() => { if (state.mode === 'market') loadMatrix(); }, 60_000);
-setInterval(() => { if (state.mode === 'funding') loadFunding(); }, 30_000);
-setInterval(() => { if (state.mode === 'liquidation') loadLiquidations(); }, 30_000);
+setInterval(() => { if (state.mode === 'funding') loadFunding(); }, 5_000);
+setInterval(() => { if (state.mode === 'liquidation') loadLiquidations(); }, 1_000);
 setInterval(() => { if (state.mode === 'market') loadCollectorLive(); }, 1_000);

@@ -72,6 +72,8 @@ test('findFundingArbitrage selects low-rate long and high-rate short', () => {
   assert.ok(Math.abs(opportunities[0].grossRate1h - 0.0003) < 1e-12);
   assert.equal(opportunities[0].breakEvenHours, 4);
   assert.ok(opportunities[0].priceDivergenceBps > 99);
+  assert.equal(opportunities[0].netReturn4hPer1000, 0);
+  assert.equal(opportunities[0].netReturn24hPer1000, 6);
 });
 
 test('findFundingArbitrage accepts public rates with unavailable venue prices', () => {
