@@ -456,61 +456,38 @@ function renderLiquidations(summary) {
 function renderLiquidationHeatmap(heatmap) {
   const buckets = heatmap?.buckets ?? [];
   const visible = (level) => state.liquidationSide === 'long' ? { ...level, total: level.long } : state.liquidationSide === 'short' ? { ...level, total: level.short } : level;
-  const points = buckets.flatMap((bucket, bucketIndex) => (bucket.levels ?? []).map((level) => ({ ...level, bucketIndex, total: Number(visible(level).total) || 0 })) ).filter((point) => point.total > 0);
-  const prices = points.map((point) => Number(point.price)).filter(Number.isFinite);
-  if (!buckets.length || !points.length || !prices.length) {
+  if (!buckets.length) {
     $('#liquidationHeatmap').innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>';
     return;
   }
-  const root = $('#liquidationHeatmap');
-  root.innerHTML = '<canvas id="liquidationChart" aria-label="Liquidation heatmap chart"></canvas><div class="heatmap-legend"><span><i class="long"></i>LONG POSITIONS</span><span><i class="short"></i>SHORT POSITIONS</span><span><i class="mixed"></i>MIXED</span><small>ACTUAL EVENTS · TIME × PRICE INTENSITY</small></div>';
-  const canvas = $('#liquidationChart');
-  const { ctx, width, height } = resizeCanvas(canvas);
-  const pad = { top: 24, right: 76, bottom: 48, left: 62 };
-  const chartWidth = Math.max(1, width - pad.left - pad.right);
-  const chartHeight = Math.max(1, height - pad.top - pad.bottom);
-  const minPrice = Math.min(...prices); const maxPrice = Math.max(...prices); const range = maxPrice - minPrice || Math.max(maxPrice * .01, 1);
-  const y = (price) => pad.top + ((maxPrice - Number(price)) / range) * chartHeight;
-  const x = (index) => pad.left + (buckets.length === 1 ? chartWidth / 2 : index / (buckets.length - 1) * chartWidth);
-  const maxTotal = Math.max(...points.map((point) => point.total), 1);
-  const stepX = buckets.length > 1 ? chartWidth / (buckets.length - 1) : chartWidth;
-  const rowHeight = Math.max(5, Math.min(26, chartHeight / Math.max(8, new Set(prices).size) * .82));
-  const hitTargets = [];
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = 'rgba(255,255,255,.018)'; ctx.fillRect(pad.left, pad.top, chartWidth, chartHeight);
-  ctx.strokeStyle = 'rgba(191,217,205,.09)'; ctx.lineWidth = 1; ctx.font = '10px IBM Plex Mono, monospace'; ctx.fillStyle = '#82938c'; ctx.textAlign = 'right';
-  for (let i = 0; i <= 5; i += 1) {
-    const price = maxPrice - range * i / 5; const py = y(price);
-    ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(width - pad.right, py); ctx.stroke(); ctx.fillText(fmtPrice(price), width - 8, py + 3);
+  const maxColumns = 48;
+  const groupSize = Math.max(1, Math.ceil(buckets.length / maxColumns));
+  const displayBuckets = [];
+  for (let start = 0; start < buckets.length; start += groupSize) {
+    const group = buckets.slice(start, start + groupSize); const byPrice = new Map();
+    group.forEach((bucket) => (bucket.levels ?? []).forEach((raw) => {
+      const level = visible(raw); const key = String(raw.price); const current = byPrice.get(key) ?? { price: raw.price, long: 0, short: 0, unknown: 0, total: 0 };
+      current.long += Number(raw.long) || 0; current.short += Number(raw.short) || 0; current.unknown += Number(raw.unknown) || 0; current.total += Number(level.total) || 0; byPrice.set(key, current);
+    }));
+    displayBuckets.push({ startMs: group[0].startMs, endMs: group.at(-1).endMs, levels: [...byPrice.values()] });
   }
-  ctx.textAlign = 'center';
-  const labelCount = Math.min(8, buckets.length);
-  for (let i = 0; i < labelCount; i += 1) {
-    const index = Math.round(i * (buckets.length - 1) / Math.max(1, labelCount - 1)); const px = x(index);
-    ctx.beginPath(); ctx.moveTo(px, pad.top); ctx.lineTo(px, pad.top + chartHeight); ctx.stroke();
-    ctx.fillText(new Date(buckets[index].startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), px, height - 22);
-  }
-  points.forEach((point) => {
-    const long = Number(point.long) || 0; const short = Number(point.short) || 0;
-    const alpha = Math.min(.95, .16 + Math.sqrt(point.total / maxTotal) * .78);
-    const color = long > short * 1.15 ? `255,95,104` : short > long * 1.15 ? `98,230,167` : `255,190,85`;
-    const px = x(point.bucketIndex); const py = y(point.price); const cellWidth = Math.max(4, Math.min(34, stepX * .78));
-    ctx.fillStyle = `rgba(${color},${alpha})`; ctx.shadowColor = `rgba(${color},${Math.min(.5, alpha)})`; ctx.shadowBlur = point.total / maxTotal > .35 ? 10 : 0;
-    ctx.fillRect(px - cellWidth / 2, py - rowHeight / 2, cellWidth, rowHeight); ctx.shadowBlur = 0;
-    hitTargets.push({ x: px, y: py, width: cellWidth, height: rowHeight, point });
-  });
-  const livePrice = Number(state.mids[state.asset]);
-  if (Number.isFinite(livePrice) && livePrice >= minPrice - range * .08 && livePrice <= maxPrice + range * .08) {
-    const py = y(livePrice); ctx.save(); ctx.strokeStyle = '#b8ff55'; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(width - pad.right, py); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#b8ff55'; ctx.beginPath(); ctx.arc(width - pad.right, py, 4, 0, Math.PI * 2); ctx.fill(); ctx.font = '700 10px IBM Plex Mono, monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#b8ff55'; ctx.fillText(`LIVE ${fmtPrice(livePrice)}`, pad.left, 15); ctx.restore();
-  }
-  const tooltip = document.createElement('div'); tooltip.className = 'liquidation-tooltip'; tooltip.hidden = true; root.append(tooltip);
-  canvas.addEventListener('mousemove', (event) => {
-    const rect = canvas.getBoundingClientRect(); const mx = event.clientX - rect.left; const my = event.clientY - rect.top;
-    const target = hitTargets.find((item) => Math.abs(mx - item.x) <= item.width && Math.abs(my - item.y) <= Math.max(item.height, 12));
-    if (!target) { tooltip.hidden = true; return; }
-    const point = target.point; tooltip.innerHTML = `<b>${fmtPrice(point.price)}</b><br>${new Date(buckets[point.bucketIndex].startMs).toLocaleString([], { hour12: false })}<br>LONG ${compactNumber(point.long)} · SHORT ${compactNumber(point.short)}<br>TOTAL ${compactNumber(point.total)}`; tooltip.style.left = `${Math.min(width - 170, Math.max(8, mx + 14))}px`; tooltip.style.top = `${Math.min(height - 105, Math.max(8, my - 45))}px`; tooltip.hidden = false;
-  });
-  canvas.addEventListener('mouseleave', () => { tooltip.hidden = true; });
+  const totalsByPrice = new Map();
+  displayBuckets.forEach((bucket) => bucket.levels.forEach((level) => totalsByPrice.set(level.price, (totalsByPrice.get(level.price) || 0) + level.total)));
+  const prices = [...totalsByPrice.entries()].sort((a, b) => b[1] - a[1]).slice(0, 18).map(([price]) => price).sort((a, b) => Number(b) - Number(a));
+  if (!prices.length) { $('#liquidationHeatmap').innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>'; return; }
+  const max = Math.max(...displayBuckets.flatMap((bucket) => bucket.levels.map((level) => level.total)), 1);
+  const header = `<div class="heatmap-corner">PRICE</div>${displayBuckets.map((bucket) => `<div class="heatmap-time">${new Date(bucket.startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`).join('')}`;
+  const rows = prices.map((price) => {
+    const cells = displayBuckets.map((bucket) => {
+      const level = bucket.levels.find((item) => String(item.price) === String(price));
+      if (!level || level.total <= 0) return '<div class="heatmap-cell empty"></div>';
+      const long = Number(level.long) || 0; const short = Number(level.short) || 0; const alpha = Math.min(.96, .12 + Math.sqrt(level.total / max) * .84);
+      const color = long > short * 1.15 ? `rgba(255,95,104,${alpha})` : short > long * 1.15 ? `rgba(98,230,167,${alpha})` : `rgba(255,190,85,${alpha})`;
+      return `<div class="heatmap-cell" style="background:${color}" title="${esc(price)} · total ${compactNumber(level.total)} · long ${compactNumber(level.long)} · short ${compactNumber(level.short)}"><span>${compactNumber(level.total)}</span></div>`;
+    }).join('');
+    return `<div class="heatmap-price">${fmtPrice(price)}</div>${cells}`;
+  }).join('');
+  $('#liquidationHeatmap').innerHTML = `<div class="heatmap-grid" style="--heat-columns:${displayBuckets.length}">${header}${rows}</div><div class="heatmap-legend"><span><i class="long"></i>LONG POSITIONS</span><span><i class="short"></i>SHORT POSITIONS</span><span><i class="mixed"></i>MIXED</span><small>${heatmap.method?.replaceAll('_', ' ') ?? 'ACTUAL EVENTS'} · ${displayBuckets.length} DISPLAY BUCKETS</small></div>`;
 }
 
 async function loadLiquidations() {
