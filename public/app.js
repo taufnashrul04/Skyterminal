@@ -2,7 +2,18 @@ import { normalizePanelState, setPanelCollapsed } from './panel-state.js';
 
 const ASSETS = ['BTC', 'ETH', 'SOL', 'HYPE'];
 const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
-const state = { mode: 'market', asset: 'BTC', timeframe: '5m', market: null, collector: null, funding: null, liquidations: null, mids: {}, matrix: {}, busy: false };
+const WORKSPACES = {
+  core: { label: 'CORE MARKET INTEL', mode: 'market', asset: 'BTC', timeframe: '5m' },
+  'bad-good-hands': { label: 'BTC BAD / GOOD HANDS', mode: 'market', asset: 'BTC', timeframe: '5m' },
+  'liquidation-farming': { label: 'ALTS LIQUIDATION FARMING', mode: 'liquidation', asset: 'BTC', timeframe: '5m' },
+  'sdelta-linear': { label: 'SCALP SDELTA · LINEAR', mode: 'market', asset: 'BTC', timeframe: '5m' },
+  'sdelta-inverse': { label: 'SCALP SDELTA · INVERSE', mode: 'market', asset: 'BTC', timeframe: '5m' },
+  'stpo-extreme': { label: 'STPO EXTREME', mode: 'market', asset: 'BTC', timeframe: '15m' },
+  'volume-pocket': { label: 'DVOL POCKET', mode: 'market', asset: 'BTC', timeframe: '5m' },
+  'range-charting': { label: 'RANGE CHARTING', mode: 'market', asset: 'BTC', timeframe: '5m' },
+  'tpo-volume': { label: 'TPO / VOLUME PROFILE', mode: 'market', asset: 'BTC', timeframe: '1h' },
+};
+const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', market: null, collector: null, funding: null, liquidations: null, mids: {}, matrix: {}, busy: false };
 let marketGeneration = 0;
 let matrixGeneration = 0;
 let fundingGeneration = 0;
@@ -87,6 +98,17 @@ function selectAsset(asset) {
 function selectTimeframe(timeframe) {
   if (!TIMEFRAMES.includes(timeframe)) return;
   state.timeframe = timeframe; renderTabs(); loadMarket();
+}
+
+function selectWorkspace(id) {
+  const workspace = WORKSPACES[id];
+  if (!workspace) return;
+  state.workspace = id;
+  $('#workspaceSelect').value = id;
+  if (workspace.asset !== state.asset) selectAsset(workspace.asset);
+  if (workspace.timeframe !== state.timeframe) selectTimeframe(workspace.timeframe);
+  selectMode(workspace.mode);
+  setStatus(`${workspace.label} LOADED`, 'live');
 }
 
 function selectMode(mode) {
@@ -192,6 +214,7 @@ function renderCollectorSummary(summary) {
     ['TRUE PROFILE POC', summary.analytics?.profile?.poc ?? 'N/A', 'TRADE-AT-PRICE', 'collector-card'],
     ['TPO POC', summary.analytics?.tpo?.poc ?? 'N/A', '30M MARKET PROFILE', 'collector-card'],
     ['LIQUIDATION FLOW', `${summary.analytics?.liquidations?.totals?.long ?? '0'} LONG / ${summary.analytics?.liquidations?.totals?.short ?? '0'} SHORT`, 'GROSS · NOTIONAL N/A', 'collector-card'],
+    ['OKX LIQUIDATIONS', (() => { const source = health?.sources?.find((item) => item.source === 'okx-liquidations'); return source?.status === 'connected' ? 'CONNECTED' : source?.last_event_us ? 'DEGRADED' : 'NO RECENT EVENTS'; })(), 'SWAP · LIQUIDATION-ORDERS', 'collector-card'],
     ['COLLECTOR STATUS', health?.status?.toUpperCase() ?? 'ONLINE', `${health?.counts?.trades ?? 0} TRADES STORED`, 'collector-card'],
   ] : [['COLLECTOR STATUS', 'OFFLINE', summary?.error ? 'LOCAL COLLECTOR UNAVAILABLE' : 'WAITING FOR DATA', 'collector-card proxy']];
   $('#exoMetrics').insertAdjacentHTML('beforeend', rows.map(([label, value, detail, cls]) => `<article class="exo-card ${cls}"><span>${label}</span><strong>${esc(value)}</strong><small>${esc(detail)}</small></article>`).join(''));
@@ -454,6 +477,7 @@ function setupCommands() {
   input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); runCommand(input.value); input.value = ''; dialog.close(); } });
   document.querySelectorAll('[data-command]').forEach((button) => button.addEventListener('click', () => runCommand(button.dataset.command)));
   document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => selectMode(button.dataset.mode)));
+  $('#workspaceSelect').addEventListener('change', (event) => selectWorkspace(event.target.value));
   $('#fundingFilter').addEventListener('input', filterFundingRows);
   $('#arbPairSearch').addEventListener('input', renderOpportunityRoutes);
   $('#arbVenueA').addEventListener('change', renderOpportunityRoutes);

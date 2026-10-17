@@ -154,6 +154,7 @@ canvas { display: block; width: 100%; height: 100%; }
 .arb-controls input, .arb-controls select, .arb-controls button { border: 1px solid var(--line); background: #080c0e; color: var(--ink); padding: 6px 8px; outline: 0; font-size: 9px; }
 .arb-controls input { width: 130px; }.arb-controls select { min-width: 130px; }.arb-controls button { cursor: pointer; color: var(--signal); }
 .arb-controls input:focus, .arb-controls select:focus, .arb-controls button:hover { border-color: var(--signal); }
+.workspace-control { display: flex; align-items: center; gap: 7px; margin-left: auto; padding: 0 10px; border-left: 1px solid var(--line); }.workspace-control label { color: var(--muted); font: 9px var(--mono); letter-spacing: .08em; white-space: nowrap; }.workspace-control select { max-width: 210px; border: 1px solid var(--line); background: #080c0e; color: var(--signal); padding: 7px 8px; outline: 0; font: 9px var(--mono); }.workspace-control select:focus { border-color: var(--signal); }
 .liquidation-dashboard { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); grid-template-areas: "hero sources" "flow flow" "doctrine doctrine"; gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
 .liquidation-hero { grid-area: hero; }.liquidation-sources { grid-area: sources; }.liquidation-flow-panel { grid-area: flow; }.liquidation-doctrine { grid-area: doctrine; }
 .liquidation-summary { display: grid; grid-template-columns: repeat(4, 1fr); }.liquidation-summary article { min-height: 104px; padding: 16px; border-right: 1px solid var(--line); }.liquidation-summary article:last-child { border-right: 0; }.liquidation-summary span, .liquidation-summary small { display: block; color: var(--muted); font-size: 9px; letter-spacing: .07em; }.liquidation-summary strong { display: block; margin: 13px 0 8px; font: 800 20px var(--sans); }
@@ -179,6 +180,7 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 @media (max-width: 620px) {
   .topbar { height: 44px; }.brand { font-size: 16px; }.market-nav { padding: 0; overflow-x: auto; }.asset-tabs, .timeframe-tabs, .mode-tabs { flex: 0 0 auto; }.tab, .mode-tab { min-height: 42px; }
+  .workspace-control { flex: 0 0 210px; margin-left: 0; border-left: 0; padding: 0 8px; }.workspace-control select { max-width: 150px; }
   .funding-summary, .source-grid, .liquidation-summary { grid-template-columns: 1fr; }
   .arb-head { align-items: flex-start !important; flex-direction: column; padding: 9px 10px !important; }
   .arb-controls { width: 100%; overflow-x: auto; padding-bottom: 2px; }
