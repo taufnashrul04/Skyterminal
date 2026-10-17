@@ -108,6 +108,10 @@ function selectWorkspace(id) {
   if (!workspace) return;
   state.workspace = id;
   $('#workspaceSelect').value = id;
+  const trigger = $('#workspaceTrigger');
+  if (trigger) { trigger.firstChild.textContent = `${workspace.label} `; trigger.setAttribute('aria-expanded', 'false'); }
+  document.querySelectorAll('[data-workspace]').forEach((button) => button.classList.toggle('active', button.dataset.workspace === id));
+  $('#workspaceMenu')?.classList.remove('open');
   if (workspace.asset !== state.asset) selectAsset(workspace.asset);
   if (workspace.timeframe !== state.timeframe) selectTimeframe(workspace.timeframe);
   selectMode(workspace.mode);
@@ -514,6 +518,9 @@ function setupCommands() {
   document.querySelectorAll('[data-command]').forEach((button) => button.addEventListener('click', () => runCommand(button.dataset.command)));
   document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => selectMode(button.dataset.mode)));
   $('#workspaceSelect').addEventListener('change', (event) => selectWorkspace(event.target.value));
+  $('#workspaceTrigger').addEventListener('click', (event) => { event.stopPropagation(); const menu = $('#workspaceMenu'); const open = menu.classList.toggle('open'); $('#workspaceTrigger').setAttribute('aria-expanded', String(open)); });
+  document.querySelectorAll('[data-workspace]').forEach((button) => button.addEventListener('click', () => selectWorkspace(button.dataset.workspace)));
+  document.addEventListener('click', () => { $('#workspaceMenu').classList.remove('open'); $('#workspaceTrigger').setAttribute('aria-expanded', 'false'); });
   $('#liquidationWindow').addEventListener('change', (event) => { state.liquidationWindow = event.target.value; if (state.mode === 'liquidation') loadLiquidations(); });
   document.querySelectorAll('[data-liq-side]').forEach((button) => button.addEventListener('click', () => { state.liquidationSide = button.dataset.liqSide; document.querySelectorAll('[data-liq-side]').forEach((item) => item.classList.toggle('active', item === button)); renderLiquidationHeatmap(state.liquidations?.analytics?.liquidations?.heatmap); }));
   $('#fundingFilter').addEventListener('input', filterFundingRows);
