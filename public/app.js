@@ -406,8 +406,9 @@ function renderFunding(data) {
   populateArbVenues(markets);
   renderOpportunityRoutes();
   $('#fundingRows').innerHTML = markets.map((item) => {
+    const unavailable = item.supportsFunding === false;
     const annualized = item.fundingRate1h * 24 * 365 * 100;
-    return `<tr><td><strong>${esc(item.ticker)}</strong></td><td>${esc(item.dex)}</td><td>${item.markPrice == null ? 'N/A' : `$${fmtPrice(item.markPrice)}`}</td><td class="${item.fundingRate1h >= 0 ? 'positive' : 'negative'}">${pct(item.fundingRate1h, 4)}</td><td>${annualized >= 0 ? '+' : ''}${annualized.toFixed(1)}%</td><td>${item.volume24h > 0 ? compactUSD(item.volume24h) : 'N/A'}</td></tr>`;
+    return `<tr><td><strong>${esc(item.ticker)}</strong></td><td>${esc(item.dex)}</td><td>${item.markPrice == null ? 'N/A' : `$${fmtPrice(item.markPrice)}`}</td><td class="${unavailable ? '' : item.fundingRate1h >= 0 ? 'positive' : 'negative'}">${unavailable ? 'N/A' : pct(item.fundingRate1h, 4)}</td><td>${unavailable ? 'NO FUNDING' : `${annualized >= 0 ? '+' : ''}${annualized.toFixed(1)}%`}</td><td>${item.volume24h > 0 ? compactUSD(item.volume24h) : 'N/A'}</td></tr>`;
   }).join('') || '<tr><td colspan="6" class="empty-cell">NO FUNDING DATA AVAILABLE</td></tr>';
   filterFundingRows();
 }
