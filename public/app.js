@@ -1,5 +1,4 @@
 import { normalizePanelState, setPanelCollapsed } from './panel-state.js';
-import { createPaperTrade } from './paper-trade.js';
 
 const ASSETS = ['BTC', 'ETH', 'SOL', 'HYPE'];
 const TIMEFRAMES = ['5m', '15m', '1h', '4h', '1d'];
@@ -14,7 +13,7 @@ const WORKSPACES = {
   'range-charting': { label: 'RANGE CHARTING', mode: 'market', asset: 'BTC', timeframe: '5m' },
   'tpo-volume': { label: 'TPO / VOLUME PROFILE', mode: 'market', asset: 'BTC', timeframe: '1h' },
 };
-const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '24h', fundingHorizon: 4, liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, mids: {}, matrix: {}, paperTrades: [], busy: false };
+const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '24h', fundingHorizon: 4, liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, mids: {}, matrix: {}, busy: false };
 let marketGeneration = 0;
 let matrixGeneration = 0;
 let fundingGeneration = 0;
@@ -341,20 +340,6 @@ function netEstimatePer1000(item, hours = state.fundingHorizon) {
   return Number((Number(item.grossRate1h) * hours * 1_000 - cost).toFixed(2));
 }
 
-const PAPER_TRADES_KEY = 'skyterminal.paper-trades.v1';
-function loadPaperTrades() { try { state.paperTrades = JSON.parse(localStorage.getItem(PAPER_TRADES_KEY) || '[]'); } catch { state.paperTrades = []; } }
-function savePaperTrades() { try { localStorage.setItem(PAPER_TRADES_KEY, JSON.stringify(state.paperTrades)); } catch { /* persistence optional */ } }
-function renderPaperJournal() {
-  const root = $('#paperTradeJournal'); if (!root) return;
-  const open = state.paperTrades.filter((trade) => trade.status === 'OPEN'); const projected = open.reduce((sum, trade) => sum + Number(trade.projectedNet || 0), 0);
-  root.innerHTML = `<div class="paper-journal-head"><div><span class="eyebrow">PAPER TRADING JOURNAL</span><small>SIMULATION ONLY · NO ORDERS SENT</small></div><div class="paper-journal-summary"><b>${open.length} OPEN</b><strong class="${projected >= 0 ? 'positive' : 'negative'}">${projected >= 0 ? '+' : ''}$${projected.toFixed(2)}</strong><small>PROJECTED NET</small></div></div>${open.length ? `<div class="paper-trade-list">${open.map((trade) => `<article class="paper-trade-row"><div><strong>${esc(trade.pair)}</strong><small>${esc(trade.longDex)} LONG → ${esc(trade.shortDex)} SHORT · ${trade.hours}H</small></div><div><span>CAPITAL</span><b>$${Number(trade.capital).toLocaleString()}</b></div><div><span>PROJECTED NET</span><b class="${trade.projectedNet >= 0 ? 'positive' : 'negative'}">${trade.projectedNet >= 0 ? '+' : ''}$${Number(trade.projectedNet).toFixed(2)}</b></div><button type="button" data-close-paper="${esc(trade.id)}">CLOSE</button></article>`).join('')}</div>` : '<div class="paper-empty">NO OPEN PAPER POSITIONS · ADD A ROUTE FROM THE TABLE ABOVE</div>'}`;
-  root.querySelectorAll('[data-close-paper]').forEach((button) => button.addEventListener('click', () => { state.paperTrades = state.paperTrades.map((trade) => trade.id === button.dataset.closePaper ? { ...trade, status: 'CLOSED', closedAt: new Date().toISOString() } : trade); savePaperTrades(); renderPaperJournal(); setStatus('PAPER POSITION CLOSED', 'live'); }));
-}
-function addPaperTrade(route) {
-  const trade = createPaperTrade(route, { capital: Number($('#paperCapital')?.value || 1000), hours: state.fundingHorizon, costBps: state.funding?.roundTripCostBps ?? 0 });
-  state.paperTrades.unshift(trade); savePaperTrades(); renderPaperJournal(); setStatus(`PAPER ${trade.pair} ROUTE ADDED · EXECUTION OFF`, 'live');
-}
-
 function opportunityRow(item) {
   const net = netEstimatePer1000(item);
   return `<tr>
@@ -367,7 +352,6 @@ function opportunityRow(item) {
     <td>${item.breakEvenHours.toFixed(1)}H</td>
     <td class="${item.priceDivergenceBps != null && item.priceDivergenceBps > 100 ? 'negative' : ''}">${item.priceDivergenceBps == null ? (item.priceRisk === 'ORACLE_PRICE_ONLY' ? 'ORACLE ONLY' : 'PRICE N/A') : `${item.priceDivergenceBps.toFixed(1)} BPS`}</td>
     <td><span class="grade ${esc(item.confidence)}">${esc(item.confidence).toUpperCase()}</span></td>
-    <td><button class="paper-trade-button" type="button" data-paper-route="${encodeURIComponent(JSON.stringify(item))}">PAPER TRADE</button></td>
   </tr>`;
 }
 
@@ -397,9 +381,7 @@ function renderOpportunityRoutes() {
   $('#arbCount').textContent = `${routes.length} ROUTES`;
   $('#opportunityRows').innerHTML = routes.length
     ? routes.map(opportunityRow).join('')
-    : '<tr><td colspan="11" class="empty-cell">NO ROUTE MATCHES THE SELECTED VENUES / PAIR</td></tr>';
-  document.querySelectorAll('[data-paper-route]').forEach((button) => button.addEventListener('click', () => addPaperTrade(JSON.parse(decodeURIComponent(button.dataset.paperRoute)))));
-  renderPaperJournal();
+    : '<tr><td colspan="10" class="empty-cell">NO ROUTE MATCHES THE SELECTED VENUES / PAIR</td></tr>';
 }
 
 function renderFunding(data) {
@@ -573,7 +555,7 @@ function setupCommands() {
 function tickClock() { $('#clock').textContent = `${new Date().toISOString().slice(11, 16)} UTC`; }
 window.addEventListener('resize', () => { if (state.market) { renderPriceChart($('#priceChart'), state.market.series.candles, state.mids[state.asset] ?? state.market.price); renderLineChart($('#deltaChart'), state.market.series.cumulativeDelta, state.market.metrics.bookImbalance >= 0 ? '#62e6a7' : '#ff5f68'); } });
 
-renderTabs(); renderMatrix(); renderUniverse(); loadPaperTrades(); renderPaperJournal(); setupCollapsiblePanels(); setupCommands(); tickClock(); loadAll();
+renderTabs(); renderMatrix(); renderUniverse(); setupCollapsiblePanels(); setupCommands(); tickClock(); loadAll();
 setInterval(tickClock, 30_000);
 setInterval(() => { if (state.mode === 'market') loadMarket(); }, 15_000);
 setInterval(() => { if (state.mode !== 'funding') loadOverview(); }, 1_000);
