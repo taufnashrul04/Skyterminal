@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractExtendedMarkets, extractQFEXMarkets } from '../lib/funding.js';
+import { extractEntropyMarkets, extractExtendedMarkets, extractQFEXMarkets } from '../lib/funding.js';
 
 test('extractQFEXMarkets normalizes perpetual contracts from QFEX', () => {
   const markets = extractQFEXMarkets({ data: [
@@ -25,4 +25,14 @@ test('extractExtendedMarkets normalizes active perpetual markets', () => {
   assert.equal(markets[0].ticker, 'BTC');
   assert.equal(markets[0].fundingRate1h, 0.0001);
   assert.equal(markets[0].markPrice, 100000);
+});
+
+test('extractEntropyMarkets reads the Hyperliquid HIP-3 io namespace', () => {
+  const markets = extractEntropyMarkets([
+    { universe: [{ name: 'io:OAI' }, { name: 'io:ANTH' }] },
+    [{ markPx: '1500', funding: '0.0002', dayNtlVlm: '1000000' }, { markPx: '2000', funding: '-0.0001', dayNtlVlm: '2000000' }],
+  ]);
+  assert.deepEqual(markets.map((market) => market.ticker), ['OAI', 'ANTH']);
+  assert.equal(markets[0].dex, 'Entropy (io)');
+  assert.equal(markets[0].fundingRate1h, 0.0002);
 });
