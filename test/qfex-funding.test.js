@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractPapertradeMarkets, extractQFEXMarkets } from '../lib/funding.js';
+import { extractExtendedMarkets, extractQFEXMarkets } from '../lib/funding.js';
 
 test('extractQFEXMarkets normalizes perpetual contracts from QFEX', () => {
   const markets = extractQFEXMarkets({ data: [
@@ -16,13 +16,13 @@ test('extractQFEXMarkets normalizes perpetual contracts from QFEX', () => {
   assert.equal(markets[0].dataSource, 'QFEX');
 });
 
-test('extractPapertradeMarkets keeps papertrade.xyz separate and marks funding unavailable', () => {
-  const markets = extractPapertradeMarkets({ instruments: [
-    [0, 'BTC', 0, '10', true, false],
-    [1, 'ETH', 0, '100', true, false],
-  ] });
-  assert.deepEqual(markets.map((market) => market.dex), ['papertrade.xyz', 'papertrade.xyz']);
+test('extractExtendedMarkets normalizes active perpetual markets', () => {
+  const markets = extractExtendedMarkets({ data: [{
+    name: 'BTC-USD', type: 'PERPETUAL', active: true, status: 'ACTIVE',
+    marketStats: { markPrice: '100000', fundingRate: '0.0001', dailyVolume: '25000000' },
+  }] });
+  assert.deepEqual(markets.map((market) => market.dex), ['Extended']);
   assert.equal(markets[0].ticker, 'BTC');
-  assert.equal(markets[0].supportsFunding, false);
-  assert.equal(markets[0].priceType, 'unavailable');
+  assert.equal(markets[0].fundingRate1h, 0.0001);
+  assert.equal(markets[0].markPrice, 100000);
 });
