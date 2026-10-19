@@ -402,7 +402,12 @@ function renderFunding(data) {
     ['COST ASSUMPTION', `${Number(data.roundTripCostBps ?? 0).toFixed(0)} BPS`, data.costModel ?? 'FEES + ESTIMATED SPREAD'],
     ['LIVE MARKETS', String(markets.length), `${online} SOURCES ONLINE`],
   ].map(([label, value, detail]) => `<article><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join('');
-  $('#sourceGrid').innerHTML = Object.entries(data.sources ?? {}).map(([name, source]) => `<div class="source-card ${source.status}"><span class="source-led"></span><div><strong>${esc(name)}</strong><small>${esc(source.status).toUpperCase()} · ${Number(source.markets ?? 0)} MARKETS</small></div></div>`).join('');
+  const sourceCards = Object.entries(data.sources ?? {}).map(([name, source]) => `<div class="source-card ${source.status}"><span class="source-led"></span><div><strong>${esc(name)}</strong><small>${esc(source.status).toUpperCase()} · ${Number(source.markets ?? 0)} MARKETS</small></div></div>`).join('');
+  const sourceSignature = Object.entries(data.sources ?? {}).map(([name, source]) => `${name}:${source.status}:${source.markets ?? 0}`).join('|');
+  if ($('#sourceGrid').dataset.signature !== sourceSignature) {
+    $('#sourceGrid').innerHTML = `<div class="source-marquee-track">${sourceCards}${sourceCards}</div>`;
+    $('#sourceGrid').dataset.signature = sourceSignature;
+  }
   populateArbVenues(markets);
   renderOpportunityRoutes();
   $('#fundingRows').innerHTML = markets.map((item) => {
