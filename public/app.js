@@ -13,7 +13,7 @@ const WORKSPACES = {
   'range-charting': { label: 'RANGE CHARTING', mode: 'market', asset: 'BTC', timeframe: '5m' },
   'tpo-volume': { label: 'TPO / VOLUME PROFILE', mode: 'market', asset: 'BTC', timeframe: '1h' },
 };
-const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '24h', fundingHorizon: 4, liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, mids: {}, matrix: {}, busy: false };
+const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '24h', liquidationView: 'levels', fundingHorizon: 4, liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, liquidationMap: null, mids: {}, matrix: {}, busy: false };
 let marketGeneration = 0;
 let matrixGeneration = 0;
 let fundingGeneration = 0;
@@ -453,11 +453,29 @@ function renderLiquidations(summary, liquidationMap = null) {
     ['SHORT POSITIONS', totals?.short ?? '—', 'POSITION SIDE'],
     ['EXPECTED PRESSURE', totals?.netExpectedPressure ?? '—', 'PRESENTATION METADATA'],
   ].map(([label, value, detail]) => `<article><span>${label}</span><strong>${esc(value)}</strong><small>${detail}</small></article>`).join('');
-  renderLiquidationLadder(analytics?.heatmap, liquidationMap);
+  renderLiquidationView(analytics?.heatmap, liquidationMap);
   $('#liquidationRows').innerHTML = buckets.length
     ? [...buckets].reverse().map((bucket) => `<tr><td>${new Date(bucket.startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${new Date(bucket.endMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td><td class="negative">${esc(bucket.long)}</td><td class="positive">${esc(bucket.short)}</td><td>${esc(bucket.unknown)}</td><td><strong>${esc(bucket.total)}</strong></td><td>${esc(bucket.netExpectedPressure)}</td></tr>`).join('')
     : '<tr><td colspan="6" class="empty-cell">NO LIQUIDATION DATA AVAILABLE</td></tr>';
   if (health?.status === 'ok') setStatus(`${state.asset} LIQUIDATIONS UPDATED`, 'live');
+}
+
+function renderLiquidationView(heatmap, model) {
+  if (state.liquidationView === 'heatmap') return renderLiquidationHeatmap(heatmap);
+  if (state.liquidationView === 'history') return renderLiquidationHistory(heatmap);
+  return renderLiquidationLadder(heatmap, model);
+}
+
+function renderLiquidationHistory(heatmap) {
+  const buckets = heatmap?.buckets ?? []; const root = $('#liquidationHeatmap');
+  if (!buckets.length) { root.innerHTML = '<div class="empty-cell">NO LIQUIDATION HISTORY</div>'; return; }
+  root.innerHTML = '<canvas id="liquidationChart" aria-label="Liquidation history"></canvas><div class="heatmap-legend"><span><i class="liquidation-leverage"></i>LONG</span><span><i class="supercharts"></i>SHORT</span><small>ACTUAL EVENT HISTORY</small></div>';
+  const canvas = $('#liquidationChart'); const { ctx, width, height } = resizeCanvas(canvas); const pad = { top: 28, right: 16, bottom: 34, left: 60 }; const plotW = width - pad.left - pad.right; const plotH = height - pad.top - pad.bottom;
+  const rows = buckets.map((bucket) => ({ time: bucket.startMs, long: Number(bucket.long) || 0, short: Number(bucket.short) || 0 })); const max = Math.max(...rows.map((row) => Math.max(row.long, row.short)), 1); const x = (i) => pad.left + (i / Math.max(1, rows.length - 1)) * plotW; const y = (value) => pad.top + plotH - (value / max) * plotH;
+  ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#090b0d'; ctx.fillRect(0, 0, width, height); ctx.strokeStyle = 'rgba(150,160,170,.15)'; ctx.font = '9px IBM Plex Mono, monospace'; ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i += 1) { const value = max * i / 4; const py = y(value); ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke(); ctx.fillStyle = '#77818b'; ctx.fillText(compactNumber(value), pad.left - 8, py + 3); }
+  const step = Math.max(2, plotW / Math.max(1, rows.length)); rows.forEach((row, index) => { const px = x(index) - step / 2; if (state.liquidationSide !== 'short') { ctx.fillStyle = 'rgba(238,74,94,.82)'; ctx.fillRect(px, y(row.long), Math.max(1, step * .45), pad.top + plotH - y(row.long)); } if (state.liquidationSide !== 'long') { ctx.fillStyle = 'rgba(43,202,126,.82)'; ctx.fillRect(px + step * .5, y(row.short), Math.max(1, step * .45), pad.top + plotH - y(row.short)); } });
+  ctx.textAlign = 'center'; ctx.fillStyle = '#77818b'; const labels = Math.min(7, rows.length); for (let i = 0; i < labels; i += 1) { const index = Math.round(i * (rows.length - 1) / Math.max(1, labels - 1)); ctx.fillText(new Date(rows[index].time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), x(index), height - 12); }
 }
 
 function renderLiquidationLadder(heatmap, model = null) {
@@ -636,8 +654,9 @@ function setupCommands() {
   $('#workspaceTrigger').addEventListener('click', (event) => { event.stopPropagation(); const menu = $('#workspaceMenu'); const open = menu.classList.toggle('open'); $('#workspaceTrigger').setAttribute('aria-expanded', String(open)); });
   document.querySelectorAll('[data-workspace]').forEach((button) => button.addEventListener('click', () => selectWorkspace(button.dataset.workspace)));
   document.addEventListener('click', () => { $('#workspaceMenu').classList.remove('open'); $('#workspaceTrigger').setAttribute('aria-expanded', 'false'); });
+  $('#liquidationView').addEventListener('change', (event) => { state.liquidationView = event.target.value; renderLiquidationView(state.liquidations?.analytics?.liquidations?.heatmap, state.liquidationMap); });
   $('#liquidationWindow').addEventListener('change', (event) => { state.liquidationWindow = event.target.value; if (state.mode === 'liquidation') loadLiquidations(); });
-  document.querySelectorAll('[data-liq-side]').forEach((button) => button.addEventListener('click', () => { state.liquidationSide = button.dataset.liqSide; document.querySelectorAll('[data-liq-side]').forEach((item) => item.classList.toggle('active', item === button)); renderLiquidationLadder(state.liquidations?.analytics?.liquidations?.heatmap, state.liquidationMap); }));
+  document.querySelectorAll('[data-liq-side]').forEach((button) => button.addEventListener('click', () => { state.liquidationSide = button.dataset.liqSide; document.querySelectorAll('[data-liq-side]').forEach((item) => item.classList.toggle('active', item === button)); renderLiquidationView(state.liquidations?.analytics?.liquidations?.heatmap, state.liquidationMap); }));
   $('#fundingFilter').addEventListener('input', filterFundingRows);
   $('#fundingHorizon').addEventListener('change', (event) => { state.fundingHorizon = Number(event.target.value); if (state.funding) { const best = state.funding.opportunities?.[0] ?? state.funding.routes?.[0]; const horizon = state.fundingHorizon; $('#fundingNetHeader').textContent = `NET $/1K @${horizon}H`; $('#fundingSummary').querySelector('article small').textContent = best ? `NET @${horizon}H $${netEstimatePer1000(best, horizon).toFixed(2)} / $1K` : 'NO CROSS-VENUE MATCH'; renderOpportunityRoutes(); } });
   $('#arbPairSearch').addEventListener('input', renderOpportunityRoutes);
