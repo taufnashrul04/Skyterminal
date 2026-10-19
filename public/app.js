@@ -435,8 +435,9 @@ async function loadFunding() {
   }
 }
 
-function renderLiquidations(summary) {
+function renderLiquidations(summary, liquidationMap = null) {
   state.liquidations = summary;
+  state.liquidationMap = liquidationMap;
   const analytics = summary?.analytics?.liquidations;
   const totals = analytics?.totals;
   const buckets = analytics?.buckets ?? [];
@@ -452,18 +453,19 @@ function renderLiquidations(summary) {
     ['SHORT POSITIONS', totals?.short ?? '—', 'POSITION SIDE'],
     ['EXPECTED PRESSURE', totals?.netExpectedPressure ?? '—', 'PRESENTATION METADATA'],
   ].map(([label, value, detail]) => `<article><span>${label}</span><strong>${esc(value)}</strong><small>${detail}</small></article>`).join('');
-  renderLiquidationMap(analytics?.heatmap);
+  renderLiquidationMap(analytics?.heatmap, liquidationMap);
   $('#liquidationRows').innerHTML = buckets.length
     ? [...buckets].reverse().map((bucket) => `<tr><td>${new Date(bucket.startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${new Date(bucket.endMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td><td class="negative">${esc(bucket.long)}</td><td class="positive">${esc(bucket.short)}</td><td>${esc(bucket.unknown)}</td><td><strong>${esc(bucket.total)}</strong></td><td>${esc(bucket.netExpectedPressure)}</td></tr>`).join('')
     : '<tr><td colspan="6" class="empty-cell">NO LIQUIDATION DATA AVAILABLE</td></tr>';
   if (health?.status === 'ok') setStatus(`${state.asset} LIQUIDATIONS UPDATED`, 'live');
 }
 
-function renderLiquidationMap(heatmap) {
+function renderLiquidationMap(heatmap, model = null) {
   const buckets = heatmap?.buckets ?? [];
+  const modelLevels = model?.levels ?? [];
   const root = $('#liquidationHeatmap');
-  if (!buckets.length) { root.innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>'; return; }
-  const mark = Number(state.mids[state.asset] ?? state.market?.price);
+  if (!buckets.length && !modelLevels.length) { root.innerHTML = '<div class="empty-cell">NO LIQUIDATION DATA AVAILABLE</div>'; return; }
+  const mark = Number(model?.mark ?? state.mids[state.asset] ?? state.market?.price);
   if (!(mark > 0)) { root.innerHTML = '<div class="empty-cell">MARK PRICE UNAVAILABLE</div>'; return; }
   const bandPct = 25;
   const levels = new Map();
@@ -477,14 +479,23 @@ function renderLiquidationMap(heatmap) {
   const rows = [...levels.values()].map((row) => {
     const long = state.liquidationSide === 'short' ? 0 : row.long;
     const short = state.liquidationSide === 'long' ? 0 : row.short;
-    return { ...row, longNotional: long * mark, shortNotional: short * mark };
+    return { ...row, longNotional: long * mark, shortNotional: short * mark, estimated: false };
   });
-  if (!rows.length) { root.innerHTML = '<div class="empty-cell">NO EVENTS WITHIN ±25% OF MARK</div>'; return; }
-  root.innerHTML = '<canvas id="liquidationChart" aria-label="Exchange liquidation map"></canvas><div class="heatmap-legend"><span><i class="liquidation-leverage"></i>LONG LIQUIDATIONS</span><span><i class="supercharts"></i>SHORT LIQUIDATIONS</span><small>EVENT-DERIVED · CONNECTED VENUES · MARK ±25%</small></div>';
+  const estimated = modelLevels.reduce((map, level) => {
+    const key = Math.round(Number(level.distancePct) * 10) / 10;
+    const row = map.get(key) ?? { distance: key, longNotional: 0, shortNotional: 0, estimated: true };
+    if (state.liquidationSide !== 'short' && level.side === 'long') row.longNotional += Number(level.notional) || 0;
+    if (state.liquidationSide !== 'long' && level.side === 'short') row.shortNotional += Number(level.notional) || 0;
+    map.set(key, row); return map;
+  }, new Map());
+  const estimatedRows = [...estimated.values()];
+  const displayRows = [...rows, ...estimatedRows];
+  if (!displayRows.length) { root.innerHTML = '<div class="empty-cell">NO EVENTS OR ESTIMATED LEVELS WITHIN ±25% OF MARK</div>'; return; }
+  root.innerHTML = '<canvas id="liquidationChart" aria-label="Exchange liquidation map"></canvas><div class="heatmap-legend"><span><i class="liquidation-leverage"></i>ESTIMATED LEVELS</span><span><i class="supercharts"></i>ACTUAL EVENTS</span><small>DEX + CEX · MARK ±25% · ESTIMATE ≠ EXECUTABLE ORDER</small></div>';
   const canvas = $('#liquidationChart'); const { ctx, width, height } = resizeCanvas(canvas);
   const pad = { top: 30, right: 16, bottom: 36, left: 54 }; const plotW = width - pad.left - pad.right; const plotH = height - pad.top - pad.bottom;
   const x = (distance) => pad.left + ((distance + bandPct) / (bandPct * 2)) * plotW;
-  const maxValue = Math.max(rows.reduce((sum, row) => sum + row.longNotional, 0), rows.reduce((sum, row) => sum + row.shortNotional, 0), 1);
+  const maxValue = Math.max(displayRows.reduce((sum, row) => sum + row.longNotional, 0), displayRows.reduce((sum, row) => sum + row.shortNotional, 0), 1);
   const y = (value) => pad.top + plotH - (value / maxValue) * plotH;
   ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#090b0d'; ctx.fillRect(0, 0, width, height);
   ctx.font = '9px IBM Plex Mono, monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#9aa4ae'; ctx.fillText(`${rows.length} PRICE BINS WITHIN ±${bandPct}% OF MARK · ${state.asset}`, 10, 14);
@@ -492,11 +503,11 @@ function renderLiquidationMap(heatmap) {
   for (let i = 0; i <= 4; i += 1) { const value = maxValue * i / 4; const py = y(value); ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke(); ctx.fillStyle = '#747d86'; ctx.fillText(compactUSD(value), pad.left - 8, py + 3); }
   const zeroX = x(0); ctx.strokeStyle = '#d9a929'; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(zeroX, pad.top, zeroX, pad.top + plotH); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#d9a929'; ctx.textAlign = 'center'; ctx.fillText(`MARK $${fmtPrice(mark)}`, zeroX, pad.top - 8);
   const binWidth = Math.max(2, plotW / Math.max(40, bandPct * 2 * 2));
-  const sorted = [...rows].sort((a, b) => a.distance - b.distance);
+  const sorted = [...displayRows].sort((a, b) => a.distance - b.distance);
   for (const row of sorted) {
     const px = x(row.distance); const longY = y(row.longNotional); const shortY = y(row.shortNotional);
-    if (row.longNotional > 0) { ctx.fillStyle = 'rgba(238,74,94,.8)'; ctx.fillRect(px - binWidth / 2, longY, binWidth, pad.top + plotH - longY); }
-    if (row.shortNotional > 0) { ctx.fillStyle = 'rgba(43,202,126,.82)'; ctx.fillRect(px - binWidth / 2, shortY, binWidth, pad.top + plotH - shortY); }
+    if (row.longNotional > 0) { ctx.fillStyle = row.estimated ? 'rgba(238,74,94,.22)' : 'rgba(238,74,94,.8)'; ctx.fillRect(px - binWidth / 2, longY, binWidth, pad.top + plotH - longY); }
+    if (row.shortNotional > 0) { ctx.fillStyle = row.estimated ? 'rgba(43,202,126,.24)' : 'rgba(43,202,126,.82)'; ctx.fillRect(px - binWidth / 2, shortY, binWidth, pad.top + plotH - shortY); }
   }
   const drawCurve = (key, color, fill) => { const points = sorted.filter((r) => r.distance <= 0 && r[key] > 0); if (key === 'shortNotional') points.push(...sorted.filter((r) => r.distance >= 0 && r[key] > 0)); if (points.length < 2) return; points.sort((a, b) => a.distance - b.distance); let cumulative = 0; const path = points.map((r) => { cumulative += r[key]; return { x: x(r.distance), y: y(cumulative) }; }); ctx.beginPath(); path.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.lineTo(path.at(-1).x, pad.top + plotH); ctx.lineTo(path[0].x, pad.top + plotH); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); ctx.beginPath(); path.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke(); };
   drawCurve('longNotional', '#f25b6b', 'rgba(238,74,94,.2)'); drawCurve('shortNotional', '#2bca7e', 'rgba(43,202,126,.2)');
@@ -544,9 +555,12 @@ async function loadLiquidations() {
   const generation = ++fundingGeneration;
   setStatus(`SYNCING ${state.asset} LIQUIDATIONS…`, 'pending');
   try {
-    const data = await getJSON(`/api/collector?asset=${state.asset}&window=${state.liquidationWindow}&scope=liquidations`);
+    const [data, liquidationMap] = await Promise.all([
+      getJSON(`/api/collector?asset=${state.asset}&window=${state.liquidationWindow}&scope=liquidations`),
+      getJSON(`/api/liquidation-map?asset=${state.asset}`),
+    ]);
     if (generation !== fundingGeneration || state.mode !== 'liquidation') return;
-    renderLiquidations(data);
+    renderLiquidations(data, liquidationMap);
   } catch (error) {
     if (generation === fundingGeneration && state.mode === 'liquidation') {
       renderLiquidations({ available: false, error: error.message });
@@ -588,7 +602,7 @@ function setupCommands() {
   document.querySelectorAll('[data-workspace]').forEach((button) => button.addEventListener('click', () => selectWorkspace(button.dataset.workspace)));
   document.addEventListener('click', () => { $('#workspaceMenu').classList.remove('open'); $('#workspaceTrigger').setAttribute('aria-expanded', 'false'); });
   $('#liquidationWindow').addEventListener('change', (event) => { state.liquidationWindow = event.target.value; if (state.mode === 'liquidation') loadLiquidations(); });
-  document.querySelectorAll('[data-liq-side]').forEach((button) => button.addEventListener('click', () => { state.liquidationSide = button.dataset.liqSide; document.querySelectorAll('[data-liq-side]').forEach((item) => item.classList.toggle('active', item === button)); renderLiquidationHeatmap(state.liquidations?.analytics?.liquidations?.heatmap); }));
+  document.querySelectorAll('[data-liq-side]').forEach((button) => button.addEventListener('click', () => { state.liquidationSide = button.dataset.liqSide; document.querySelectorAll('[data-liq-side]').forEach((item) => item.classList.toggle('active', item === button)); renderLiquidationMap(state.liquidations?.analytics?.liquidations?.heatmap, state.liquidationMap); }));
   $('#fundingFilter').addEventListener('input', filterFundingRows);
   $('#fundingHorizon').addEventListener('change', (event) => { state.fundingHorizon = Number(event.target.value); if (state.funding) { const best = state.funding.opportunities?.[0] ?? state.funding.routes?.[0]; const horizon = state.fundingHorizon; $('#fundingNetHeader').textContent = `NET $/1K @${horizon}H`; $('#fundingSummary').querySelector('article small').textContent = best ? `NET @${horizon}H $${netEstimatePer1000(best, horizon).toFixed(2)} / $1K` : 'NO CROSS-VENUE MATCH'; renderOpportunityRoutes(); } });
   $('#arbPairSearch').addEventListener('input', renderOpportunityRoutes);
