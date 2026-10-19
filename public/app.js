@@ -453,11 +453,46 @@ function renderLiquidations(summary, liquidationMap = null) {
     ['SHORT POSITIONS', totals?.short ?? '—', 'POSITION SIDE'],
     ['EXPECTED PRESSURE', totals?.netExpectedPressure ?? '—', 'PRESENTATION METADATA'],
   ].map(([label, value, detail]) => `<article><span>${label}</span><strong>${esc(value)}</strong><small>${detail}</small></article>`).join('');
-  renderLiquidationMap(analytics?.heatmap, liquidationMap);
+  renderLiquidationLadder(analytics?.heatmap, liquidationMap);
   $('#liquidationRows').innerHTML = buckets.length
     ? [...buckets].reverse().map((bucket) => `<tr><td>${new Date(bucket.startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${new Date(bucket.endMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td><td class="negative">${esc(bucket.long)}</td><td class="positive">${esc(bucket.short)}</td><td>${esc(bucket.unknown)}</td><td><strong>${esc(bucket.total)}</strong></td><td>${esc(bucket.netExpectedPressure)}</td></tr>`).join('')
     : '<tr><td colspan="6" class="empty-cell">NO LIQUIDATION DATA AVAILABLE</td></tr>';
   if (health?.status === 'ok') setStatus(`${state.asset} LIQUIDATIONS UPDATED`, 'live');
+}
+
+function renderLiquidationLadder(heatmap, model = null) {
+  const buckets = heatmap?.buckets ?? []; const modelLevels = model?.levels ?? []; const root = $('#liquidationHeatmap');
+  const mark = Number(model?.mark ?? state.mids[state.asset] ?? state.market?.price); const bandPct = 25;
+  if (!(mark > 0)) { root.innerHTML = '<div class="empty-cell">MARK PRICE UNAVAILABLE</div>'; return; }
+  const bands = new Map();
+  const add = (distance, side, notional, estimated) => {
+    if (!Number.isFinite(distance) || Math.abs(distance) > bandPct || notional <= 0) return;
+    const key = Math.round(distance * 2) / 2; const row = bands.get(key) ?? { distance: key, estimatedLong: 0, estimatedShort: 0, actualLong: 0, actualShort: 0 };
+    const target = estimated ? `estimated${side === 'long' ? 'Long' : 'Short'}` : `actual${side === 'long' ? 'Long' : 'Short'}`; row[target] += notional; bands.set(key, row);
+  };
+  for (const bucket of buckets) for (const raw of bucket.levels ?? []) {
+    const price = Number(raw.price); if (!(price > 0)) continue; const distance = (price / mark - 1) * 100;
+    if (state.liquidationSide !== 'short') add(distance, 'long', (Number(raw.long) || 0) * price, false);
+    if (state.liquidationSide !== 'long') add(distance, 'short', (Number(raw.short) || 0) * price, false);
+  }
+  for (const level of modelLevels) add(Number(level.distancePct), level.side, Number(level.notional), true);
+  const rows = [...bands.values()]; if (!rows.length) { root.innerHTML = '<div class="empty-cell">NO LIQUIDATION LEVELS WITHIN ±25%</div>'; return; }
+  root.innerHTML = '<canvas id="liquidationChart" aria-label="Liquidation level ladder"></canvas><div class="heatmap-legend"><span><i class="liquidation-leverage"></i>ESTIMATED LEVELS</span><span><i class="supercharts"></i>ACTUAL EVENTS</span><small>LONG ← MARK → SHORT · DEX + CEX</small></div>';
+  const canvas = $('#liquidationChart'); const { ctx, width, height } = resizeCanvas(canvas); const pad = { top: 30, right: 72, bottom: 34, left: 58 }; const plotW = width - pad.left - pad.right; const plotH = height - pad.top - pad.bottom; const center = pad.left + plotW / 2;
+  const y = (distance) => pad.top + ((bandPct - distance) / (bandPct * 2)) * plotH; const maxValue = Math.max(...rows.map((r) => Math.max(r.estimatedLong + r.actualLong, r.estimatedShort + r.actualShort)), 1); const maxBar = plotW / 2 - 16;
+  ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#090b0d'; ctx.fillRect(0, 0, width, height); ctx.font = '9px IBM Plex Mono, monospace'; ctx.fillStyle = '#a9b2ba'; ctx.textAlign = 'left'; ctx.fillText(`${state.asset} LIQUIDATION LEVELS · MARK ±${bandPct}%`, 10, 14);
+  ctx.strokeStyle = 'rgba(150,160,170,.15)'; ctx.lineWidth = 1; ctx.textAlign = 'right';
+  for (const distance of [-25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25]) { const py = y(distance); ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke(); ctx.fillStyle = '#77818b'; ctx.fillText(`${distance > 0 ? '+' : ''}${distance}%`, pad.left - 9, py + 3); }
+  ctx.strokeStyle = '#e3b630'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(center, pad.top, center, pad.top + plotH); ctx.stroke(); ctx.setLineDash([]); ctx.textAlign = 'center'; ctx.fillStyle = '#e3b630'; ctx.fillText(`MARK $${fmtPrice(mark)}`, center, pad.top - 8);
+  for (const row of rows.sort((a, b) => a.distance - b.distance)) {
+    const py = y(row.distance); const scale = (value) => Math.min(maxBar, Math.sqrt(value / maxValue) * maxBar);
+    const estimatedLong = scale(row.estimatedLong); const estimatedShort = scale(row.estimatedShort); const actualLong = scale(row.actualLong); const actualShort = scale(row.actualShort);
+    if (estimatedLong) { ctx.fillStyle = 'rgba(238,74,94,.24)'; ctx.fillRect(center - estimatedLong, py - 5, estimatedLong, 10); }
+    if (estimatedShort) { ctx.fillStyle = 'rgba(43,202,126,.24)'; ctx.fillRect(center, py - 5, estimatedShort, 10); }
+    if (actualLong) { ctx.fillStyle = 'rgba(238,74,94,.95)'; ctx.fillRect(center - actualLong, py - 3, actualLong, 6); }
+    if (actualShort) { ctx.fillStyle = 'rgba(43,202,126,.95)'; ctx.fillRect(center, py - 3, actualShort, 6); }
+  }
+  ctx.textAlign = 'center'; ctx.fillStyle = '#7f8992'; ctx.fillText('LONG LIQUIDATIONS', pad.left + plotW * .25, height - 12); ctx.fillText('SHORT LIQUIDATIONS', pad.left + plotW * .75, height - 12);
 }
 
 function renderLiquidationMap(heatmap, model = null) {
@@ -602,7 +637,7 @@ function setupCommands() {
   document.querySelectorAll('[data-workspace]').forEach((button) => button.addEventListener('click', () => selectWorkspace(button.dataset.workspace)));
   document.addEventListener('click', () => { $('#workspaceMenu').classList.remove('open'); $('#workspaceTrigger').setAttribute('aria-expanded', 'false'); });
   $('#liquidationWindow').addEventListener('change', (event) => { state.liquidationWindow = event.target.value; if (state.mode === 'liquidation') loadLiquidations(); });
-  document.querySelectorAll('[data-liq-side]').forEach((button) => button.addEventListener('click', () => { state.liquidationSide = button.dataset.liqSide; document.querySelectorAll('[data-liq-side]').forEach((item) => item.classList.toggle('active', item === button)); renderLiquidationMap(state.liquidations?.analytics?.liquidations?.heatmap, state.liquidationMap); }));
+  document.querySelectorAll('[data-liq-side]').forEach((button) => button.addEventListener('click', () => { state.liquidationSide = button.dataset.liqSide; document.querySelectorAll('[data-liq-side]').forEach((item) => item.classList.toggle('active', item === button)); renderLiquidationLadder(state.liquidations?.analytics?.liquidations?.heatmap, state.liquidationMap); }));
   $('#fundingFilter').addEventListener('input', filterFundingRows);
   $('#fundingHorizon').addEventListener('change', (event) => { state.fundingHorizon = Number(event.target.value); if (state.funding) { const best = state.funding.opportunities?.[0] ?? state.funding.routes?.[0]; const horizon = state.fundingHorizon; $('#fundingNetHeader').textContent = `NET $/1K @${horizon}H`; $('#fundingSummary').querySelector('article small').textContent = best ? `NET @${horizon}H $${netEstimatePer1000(best, horizon).toFixed(2)} / $1K` : 'NO CROSS-VENUE MATCH'; renderOpportunityRoutes(); } });
   $('#arbPairSearch').addEventListener('input', renderOpportunityRoutes);
