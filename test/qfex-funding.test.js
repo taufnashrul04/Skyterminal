@@ -49,5 +49,5 @@ test('extractPhoenixMarkets joins active markets with hourly funding overview', 
   assert.equal(markets[0].dex, 'Phoenix');
   assert.equal(markets[0].ticker, 'SOL');
   assert.equal(markets[0].markPrice, 101);
-  assert.equal(markets[0].fundingRate1h, -0.0002);
+  assert.equal(markets[0].fundingRate1h, -0.000002);
 });
