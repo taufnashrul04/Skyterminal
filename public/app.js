@@ -452,11 +452,55 @@ function renderLiquidations(summary) {
     ['SHORT POSITIONS', totals?.short ?? '—', 'POSITION SIDE'],
     ['EXPECTED PRESSURE', totals?.netExpectedPressure ?? '—', 'PRESENTATION METADATA'],
   ].map(([label, value, detail]) => `<article><span>${label}</span><strong>${esc(value)}</strong><small>${detail}</small></article>`).join('');
-  renderLiquidationHeatmap(analytics?.heatmap);
+  renderLiquidationMap(analytics?.heatmap);
   $('#liquidationRows').innerHTML = buckets.length
     ? [...buckets].reverse().map((bucket) => `<tr><td>${new Date(bucket.startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${new Date(bucket.endMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td><td class="negative">${esc(bucket.long)}</td><td class="positive">${esc(bucket.short)}</td><td>${esc(bucket.unknown)}</td><td><strong>${esc(bucket.total)}</strong></td><td>${esc(bucket.netExpectedPressure)}</td></tr>`).join('')
     : '<tr><td colspan="6" class="empty-cell">NO LIQUIDATION DATA AVAILABLE</td></tr>';
   if (health?.status === 'ok') setStatus(`${state.asset} LIQUIDATIONS UPDATED`, 'live');
+}
+
+function renderLiquidationMap(heatmap) {
+  const buckets = heatmap?.buckets ?? [];
+  const root = $('#liquidationHeatmap');
+  if (!buckets.length) { root.innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>'; return; }
+  const mark = Number(state.mids[state.asset] ?? state.market?.price);
+  if (!(mark > 0)) { root.innerHTML = '<div class="empty-cell">MARK PRICE UNAVAILABLE</div>'; return; }
+  const bandPct = 25;
+  const levels = new Map();
+  for (const bucket of buckets) for (const raw of bucket.levels ?? []) {
+    const price = Number(raw.price); if (!(price > 0)) continue;
+    const distance = (price / mark - 1) * 100; if (Math.abs(distance) > bandPct) continue;
+    const key = Math.round(distance * 10) / 10;
+    const current = levels.get(key) ?? { distance: key, long: 0, short: 0 };
+    current.long += Number(raw.long) || 0; current.short += Number(raw.short) || 0; levels.set(key, current);
+  }
+  const rows = [...levels.values()].map((row) => {
+    const long = state.liquidationSide === 'short' ? 0 : row.long;
+    const short = state.liquidationSide === 'long' ? 0 : row.short;
+    return { ...row, longNotional: long * mark, shortNotional: short * mark };
+  });
+  if (!rows.length) { root.innerHTML = '<div class="empty-cell">NO EVENTS WITHIN ±25% OF MARK</div>'; return; }
+  root.innerHTML = '<canvas id="liquidationChart" aria-label="Exchange liquidation map"></canvas><div class="heatmap-legend"><span><i class="liquidation-leverage"></i>LONG LIQUIDATIONS</span><span><i class="supercharts"></i>SHORT LIQUIDATIONS</span><small>EVENT-DERIVED · CONNECTED VENUES · MARK ±25%</small></div>';
+  const canvas = $('#liquidationChart'); const { ctx, width, height } = resizeCanvas(canvas);
+  const pad = { top: 30, right: 16, bottom: 36, left: 54 }; const plotW = width - pad.left - pad.right; const plotH = height - pad.top - pad.bottom;
+  const x = (distance) => pad.left + ((distance + bandPct) / (bandPct * 2)) * plotW;
+  const maxValue = Math.max(rows.reduce((sum, row) => sum + row.longNotional, 0), rows.reduce((sum, row) => sum + row.shortNotional, 0), 1);
+  const y = (value) => pad.top + plotH - (value / maxValue) * plotH;
+  ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#090b0d'; ctx.fillRect(0, 0, width, height);
+  ctx.font = '9px IBM Plex Mono, monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#9aa4ae'; ctx.fillText(`${rows.length} PRICE BINS WITHIN ±${bandPct}% OF MARK · ${state.asset}`, 10, 14);
+  ctx.strokeStyle = 'rgba(150,160,170,.13)'; ctx.lineWidth = 1; ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i += 1) { const value = maxValue * i / 4; const py = y(value); ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke(); ctx.fillStyle = '#747d86'; ctx.fillText(compactUSD(value), pad.left - 8, py + 3); }
+  const zeroX = x(0); ctx.strokeStyle = '#d9a929'; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(zeroX, pad.top, zeroX, pad.top + plotH); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#d9a929'; ctx.textAlign = 'center'; ctx.fillText(`MARK $${fmtPrice(mark)}`, zeroX, pad.top - 8);
+  const binWidth = Math.max(2, plotW / Math.max(40, bandPct * 2 * 2));
+  const sorted = [...rows].sort((a, b) => a.distance - b.distance);
+  for (const row of sorted) {
+    const px = x(row.distance); const longY = y(row.longNotional); const shortY = y(row.shortNotional);
+    if (row.longNotional > 0) { ctx.fillStyle = 'rgba(238,74,94,.8)'; ctx.fillRect(px - binWidth / 2, longY, binWidth, pad.top + plotH - longY); }
+    if (row.shortNotional > 0) { ctx.fillStyle = 'rgba(43,202,126,.82)'; ctx.fillRect(px - binWidth / 2, shortY, binWidth, pad.top + plotH - shortY); }
+  }
+  const drawCurve = (key, color, fill) => { const points = sorted.filter((r) => r.distance <= 0 && r[key] > 0); if (key === 'shortNotional') points.push(...sorted.filter((r) => r.distance >= 0 && r[key] > 0)); if (points.length < 2) return; points.sort((a, b) => a.distance - b.distance); let cumulative = 0; const path = points.map((r) => { cumulative += r[key]; return { x: x(r.distance), y: y(cumulative) }; }); ctx.beginPath(); path.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.lineTo(path.at(-1).x, pad.top + plotH); ctx.lineTo(path[0].x, pad.top + plotH); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); ctx.beginPath(); path.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke(); };
+  drawCurve('longNotional', '#f25b6b', 'rgba(238,74,94,.2)'); drawCurve('shortNotional', '#2bca7e', 'rgba(43,202,126,.2)');
+  ctx.textAlign = 'center'; ctx.fillStyle = '#858f98'; for (const pctLabel of [-25, -19, -13, -6, 0, 6, 13, 19, 25]) ctx.fillText(`${pctLabel > 0 ? '+' : ''}${pctLabel}%`, x(pctLabel), height - 13);
 }
 
 function renderLiquidationHeatmap(heatmap) {
