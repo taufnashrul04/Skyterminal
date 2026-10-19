@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractEntropyMarkets, extractExtendedMarkets, extractQFEXMarkets } from '../lib/funding.js';
+import { extractEntropyMarkets, extractExtendedMarkets, extractPhoenixMarkets, extractQFEXMarkets } from '../lib/funding.js';
 
 test('extractQFEXMarkets normalizes perpetual contracts from QFEX', () => {
   const markets = extractQFEXMarkets({ data: [
@@ -35,4 +35,19 @@ test('extractEntropyMarkets reads the Hyperliquid HIP-3 io namespace', () => {
   assert.deepEqual(markets.map((market) => market.ticker), ['OAI', 'ANTH']);
   assert.equal(markets[0].dex, 'Entropy (io)');
   assert.equal(markets[0].fundingRate1h, 0.0002);
+});
+
+test('extractPhoenixMarkets joins active markets with hourly funding overview', () => {
+  const markets = extractPhoenixMarkets([
+    { symbol: 'SOL-PERP', marketStatus: 'active' },
+    { symbol: 'INACTIVE-PERP', marketStatus: 'inactive' },
+  ], { series: [{ symbol: 'SOL-PERP', points: [
+    { timestamp: '2026-10-18T00:00:00Z', markPrice: '100', fundingRate: '0.0001' },
+    { timestamp: '2026-10-18T01:00:00Z', markPrice: '101', fundingRate: '-0.0002' },
+  ] }] });
+  assert.equal(markets.length, 1);
+  assert.equal(markets[0].dex, 'Phoenix');
+  assert.equal(markets[0].ticker, 'SOL');
+  assert.equal(markets[0].markPrice, 101);
+  assert.equal(markets[0].fundingRate1h, -0.0002);
 });
