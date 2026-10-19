@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   return json({
-    name: 'Skyterminal',
+    name: 'Bothmarket',
     status: 'ok',
     version: '0.7.0',
     marketIntelAssets: ['BTC', 'ETH', 'SOL', 'HYPE'],
