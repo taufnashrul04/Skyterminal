@@ -36,6 +36,19 @@ function fromExtended(response, asset) {
   });
 }
 
+function fromPhoenix(marketsResponse, fundingResponse, asset) {
+  const latestBySymbol = new Map((fundingResponse?.series ?? []).map((series) => [String(series?.symbol ?? '').toUpperCase(), [...(series?.points ?? [])].at(-1)]));
+  return (Array.isArray(marketsResponse) ? marketsResponse : []).flatMap((market) => {
+    if (ticker(market?.symbol) !== asset || String(market?.marketStatus ?? '').toLowerCase() !== 'active') return [];
+    const point = latestBySymbol.get(String(market?.symbol ?? '').toUpperCase());
+    const mark = finite(point?.markPrice);
+    const oiLots = finite(market?.statsSnapshot?.openInterestBaseLots);
+    const oi = oiLots / (10 ** finite(market?.baseLotsDecimals, 0)) * mark;
+    const maxLeverage = Math.max(1, finite(market?.leverageTiers?.[0]?.maxLeverage, 10));
+    return mark > 0 && oi > 0 ? [{ venue: 'Phoenix', mark, openInterest: oi, maxLeverage }] : [];
+  });
+}
+
 function buildLevels(markets) {
   const levels = [];
   for (const market of markets) {
@@ -55,12 +68,14 @@ export async function GET(request) {
   const asset = String(new URL(request.url).searchParams.get('asset') || 'BTC').toUpperCase();
   if (!ASSETS.has(asset)) return json({ error: `Unsupported asset: ${asset}` }, 400);
   try {
-    const [hl, entropy, extended] = await Promise.all([
+    const [hl, entropy, extended, phoenixMarkets, phoenixFunding] = await Promise.all([
       getJSON('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'metaAndAssetCtxs' }) }),
       getJSON('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'metaAndAssetCtxs', dex: 'io' }) }),
       getJSON('https://api.starknet.extended.exchange/api/v1/info/markets'),
+      getJSON('https://perp-api.phoenix.trade/v1/view/exchange/markets'),
+      getJSON('https://perp-api.phoenix.trade/v1/funding/overview'),
     ]);
-    const markets = [...fromHyperliquid(hl, 'Hyperliquid', asset), ...fromHyperliquid(entropy, 'Entropy (io)', asset), ...fromExtended(extended, asset)];
+    const markets = [...fromHyperliquid(hl, 'Hyperliquid', asset), ...fromHyperliquid(entropy, 'Entropy (io)', asset), ...fromExtended(extended, asset), ...fromPhoenix(phoenixMarkets, phoenixFunding, asset)];
     const mark = markets[0]?.mark ?? null;
     return json({ asset, mark, method: 'ESTIMATED_OI_LEVERAGE_LEVELS', disclaimer: 'Estimated levels from public open interest and maximum leverage; not exchange-published liquidation orders.', markets, levels: buildLevels(markets) });
   } catch (error) {
