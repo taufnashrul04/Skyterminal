@@ -485,7 +485,7 @@ function renderLiquidationLadder(heatmap, model = null) {
   const bands = new Map();
   const add = (distance, side, notional, estimated) => {
     if (!Number.isFinite(distance) || Math.abs(distance) > bandPct || notional <= 0) return;
-    const key = Math.round(distance * 2) / 2; const row = bands.get(key) ?? { distance: key, estimatedLong: 0, estimatedShort: 0, actualLong: 0, actualShort: 0 };
+    const key = Math.max(-bandPct, Math.min(bandPct, Math.round(distance))); const row = bands.get(key) ?? { distance: key, estimatedLong: 0, estimatedShort: 0, actualLong: 0, actualShort: 0 };
     const target = estimated ? `estimated${side === 'long' ? 'Long' : 'Short'}` : `actual${side === 'long' ? 'Long' : 'Short'}`; row[target] += notional; bands.set(key, row);
   };
   for (const bucket of buckets) for (const raw of bucket.levels ?? []) {
@@ -493,24 +493,22 @@ function renderLiquidationLadder(heatmap, model = null) {
     if (state.liquidationSide !== 'short') add(distance, 'long', (Number(raw.long) || 0) * price, false);
     if (state.liquidationSide !== 'long') add(distance, 'short', (Number(raw.short) || 0) * price, false);
   }
-  for (const level of modelLevels) add(Number(level.distancePct), level.side, Number(level.notional), true);
-  const rows = [...bands.values()]; if (!rows.length) { root.innerHTML = '<div class="empty-cell">NO LIQUIDATION LEVELS WITHIN ±25%</div>'; return; }
-  root.innerHTML = '<canvas id="liquidationChart" aria-label="Liquidation level ladder"></canvas><div class="heatmap-legend"><span><i class="liquidation-leverage"></i>ESTIMATED LEVELS</span><span><i class="supercharts"></i>ACTUAL EVENTS</span><small>LONG ← MARK → SHORT · DEX + CEX</small></div>';
-  const canvas = $('#liquidationChart'); const { ctx, width, height } = resizeCanvas(canvas); const pad = { top: 30, right: 72, bottom: 34, left: 58 }; const plotW = width - pad.left - pad.right; const plotH = height - pad.top - pad.bottom; const center = pad.left + plotW / 2;
-  const y = (distance) => pad.top + ((bandPct - distance) / (bandPct * 2)) * plotH; const maxValue = Math.max(...rows.map((r) => Math.max(r.estimatedLong + r.actualLong, r.estimatedShort + r.actualShort)), 1); const maxBar = plotW / 2 - 16;
-  ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#090b0d'; ctx.fillRect(0, 0, width, height); ctx.font = '9px IBM Plex Mono, monospace'; ctx.fillStyle = '#a9b2ba'; ctx.textAlign = 'left'; ctx.fillText(`${state.asset} LIQUIDATION LEVELS · MARK ±${bandPct}%`, 10, 14);
-  ctx.strokeStyle = 'rgba(150,160,170,.15)'; ctx.lineWidth = 1; ctx.textAlign = 'right';
-  for (const distance of [-25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25]) { const py = y(distance); ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke(); ctx.fillStyle = '#77818b'; ctx.fillText(`${distance > 0 ? '+' : ''}${distance}%`, pad.left - 9, py + 3); }
-  ctx.strokeStyle = '#e3b630'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(center, pad.top, center, pad.top + plotH); ctx.stroke(); ctx.setLineDash([]); ctx.textAlign = 'center'; ctx.fillStyle = '#e3b630'; ctx.fillText(`MARK $${fmtPrice(mark)}`, center, pad.top - 8);
-  for (const row of rows.sort((a, b) => a.distance - b.distance)) {
-    const py = y(row.distance); const scale = (value) => Math.min(maxBar, Math.sqrt(value / maxValue) * maxBar);
-    const estimatedLong = scale(row.estimatedLong); const estimatedShort = scale(row.estimatedShort); const actualLong = scale(row.actualLong); const actualShort = scale(row.actualShort);
-    if (estimatedLong) { ctx.fillStyle = 'rgba(238,74,94,.24)'; ctx.fillRect(center - estimatedLong, py - 5, estimatedLong, 10); }
-    if (estimatedShort) { ctx.fillStyle = 'rgba(43,202,126,.24)'; ctx.fillRect(center, py - 5, estimatedShort, 10); }
-    if (actualLong) { ctx.fillStyle = 'rgba(238,74,94,.95)'; ctx.fillRect(center - actualLong, py - 3, actualLong, 6); }
-    if (actualShort) { ctx.fillStyle = 'rgba(43,202,126,.95)'; ctx.fillRect(center, py - 3, actualShort, 6); }
+  for (const level of modelLevels) if (state.liquidationSide === 'all' || state.liquidationSide === level.side) add(Number(level.distancePct), level.side, Number(level.notional), true);
+  if (!bands.size) { root.innerHTML = '<div class="empty-cell">NO LIQUIDATION LEVELS WITHIN ±25%</div>'; return; }
+  root.innerHTML = '<canvas id="liquidationChart" aria-label="Liquidation level ladder"></canvas><div class="heatmap-legend"><span><i class="liquidation-leverage"></i>ESTIMATED OI / LEVERAGE</span><span><i class="supercharts"></i>ACTUAL EXCHANGE EVENTS</span><small>LONG LIQUIDATIONS ← MARK → SHORT LIQUIDATIONS · ESTIMATE ≠ ORDER</small></div>';
+  const canvas = $('#liquidationChart'); const { ctx, width, height } = resizeCanvas(canvas); const pad = { top: 48, right: 28, bottom: 42, left: 54 }; const plotW = width - pad.left - pad.right; const plotH = height - pad.top - pad.bottom; const center = pad.left + plotW / 2;
+  const y = (distance) => pad.top + ((bandPct - distance) / (bandPct * 2)) * plotH; const maxValue = Math.max(...[...bands.values()].map((r) => Math.max(r.estimatedLong + r.actualLong, r.estimatedShort + r.actualShort)), 1); const maxBar = plotW / 2 - 18; const scale = (value) => Math.min(maxBar, Math.sqrt(value / maxValue) * maxBar);
+  ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#0c1414'; ctx.fillRect(0, 0, width, height); ctx.font = '10px IBM Plex Mono, monospace';
+  ctx.fillStyle = '#93a19b'; ctx.textAlign = 'left'; ctx.fillText(`${state.asset} · ESTIMATED LIQUIDATION LEVELS`, pad.left, 18); ctx.fillStyle = '#e4b83d'; ctx.textAlign = 'center'; ctx.fillText(`MARK  $${fmtPrice(mark)}`, center, 18);
+  ctx.fillStyle = '#ef5c6d'; ctx.textAlign = 'left'; ctx.fillText('LONG', pad.left, 36); ctx.fillStyle = '#39d38d'; ctx.textAlign = 'right'; ctx.fillText('SHORT', pad.left + plotW, 36);
+  ctx.textAlign = 'right';
+  for (let distance = 25; distance >= -25; distance -= 5) { const py = y(distance); ctx.fillStyle = distance === 0 ? 'rgba(228,184,61,.22)' : 'rgba(146,163,157,.08)'; ctx.fillRect(pad.left, py - 10, plotW, 20); ctx.strokeStyle = distance === 0 ? 'rgba(228,184,61,.5)' : 'rgba(146,163,157,.14)'; ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke(); ctx.fillStyle = distance === 0 ? '#e4b83d' : '#879590'; ctx.fillText(`${distance > 0 ? '+' : ''}${distance}%`, pad.left - 9, py + 3); }
+  ctx.strokeStyle = '#e4b83d'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(center, pad.top, center, pad.top + plotH); ctx.stroke(); ctx.setLineDash([]);
+  for (const row of [...bands.values()].sort((a, b) => b.distance - a.distance)) { const py = y(row.distance); const longOuter = scale(row.estimatedLong + row.actualLong); const shortOuter = scale(row.estimatedShort + row.actualShort); const longActual = scale(row.actualLong); const shortActual = scale(row.actualShort); const h = 13;
+    if (longOuter) { ctx.fillStyle = 'rgba(239,92,109,.2)'; ctx.fillRect(center - longOuter, py - h / 2, longOuter, h); } if (shortOuter) { ctx.fillStyle = 'rgba(57,211,141,.2)'; ctx.fillRect(center, py - h / 2, shortOuter, h); }
+    if (longActual) { ctx.fillStyle = '#ef5c6d'; ctx.fillRect(center - longActual, py - 4, longActual, 8); } if (shortActual) { ctx.fillStyle = '#39d38d'; ctx.fillRect(center, py - 4, shortActual, 8); }
   }
-  ctx.textAlign = 'center'; ctx.fillStyle = '#7f8992'; ctx.fillText('LONG LIQUIDATIONS', pad.left + plotW * .25, height - 12); ctx.fillText('SHORT LIQUIDATIONS', pad.left + plotW * .75, height - 12);
+  ctx.fillStyle = '#64726d'; ctx.textAlign = 'center'; ctx.fillText('LONG LIQUIDATION NOTIONAL', pad.left + plotW * .25, height - 16); ctx.fillText('SHORT LIQUIDATION NOTIONAL', pad.left + plotW * .75, height - 16);
 }
 
 function renderLiquidationMap(heatmap, model = null) {
