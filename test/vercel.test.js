@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { GET as healthGET } from '../api/health.js';
 import { GET as marketGET } from '../api/market.js';
 import { GET as collectorGET } from '../api/collector.js';
+import { GET as liquidationHeatmapGET } from '../api/liquidation-heatmap.js';
 
 test('Vercel health function exposes split market universes', async () => {
   const response = await healthGET();
@@ -60,6 +61,23 @@ test('Vercel collector keeps legacy analytics live when heatmap route is not dep
   const body = await response.json();
   assert.equal(body.available, true);
   assert.equal(body.analytics.liquidations.heatmap, null);
+});
+
+test('Vercel liquidation heatmap proxies collector event buckets', async () => {
+  const calls = [];
+  const fetchImpl = async (url, options = {}) => {
+    calls.push({ url, options });
+    return { ok: true, json: async () => ({ data: { buckets: [{ levels: [{ price: '100', total: '1' }] }], method: 'ACTUAL_LIQUIDATION_EVENTS' } }) };
+  };
+  const response = await liquidationHeatmapGET(
+    new Request('https://skyterminal.test/api/liquidation-heatmap?asset=BTC&window=24h'),
+    { baseUrl: 'https://collector.test', fetchImpl },
+  );
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.heatmap.method, 'ACTUAL_LIQUIDATION_EVENTS');
+  assert.equal(body.heatmap.buckets.length, 1);
+  assert.match(calls[0].url, /\/v1\/liquidations\/heatmap\?/);
 });
 
 test('Vercel market function rejects assets outside Market Intel universe', async () => {
