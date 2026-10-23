@@ -13,7 +13,7 @@ const WORKSPACES = {
   'range-charting': { label: 'RANGE CHARTING', mode: 'market', asset: 'BTC', timeframe: '5m' },
   'tpo-volume': { label: 'TPO / VOLUME PROFILE', mode: 'market', asset: 'BTC', timeframe: '1h' },
 };
-const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '24h', liquidationView: 'levels', fundingHorizon: 4, liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, liquidationMap: null, heatmapFull: null, mids: {}, matrix: {}, busy: false };
+const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '24h', liquidationView: 'projected', fundingHorizon: 4, liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, liquidationMap: null, heatmapFull: null, liquidationLevels: null, mids: {}, matrix: {}, busy: false };
 let marketGeneration = 0;
 let matrixGeneration = 0;
 let fundingGeneration = 0;
@@ -471,6 +471,8 @@ function renderLiquidations(summary, liquidationMap = null, fullHeatmap = null) 
 }
 
 function renderLiquidationView(heatmap, model) {
+  if (state.liquidationView === 'projected') return renderProjectedHeatmap();
+  if (state.liquidationView === 'map') return renderProjectedMap();
   if (state.liquidationView === 'heatmap') return renderLiquidationHeatmap();
   if (state.liquidationView === 'history') return renderLiquidationHistory(heatmap);
   return renderLiquidationLadder(heatmap, model);
@@ -767,6 +769,253 @@ function renderLiquidationHeatmap() {
   }
 }
 
+// Coinglass-style ramp: a deep purple floor rising through teal and green to bright
+// yellow where projected notional stacks up.
+const HEAT_STOPS = [
+  [0.00, [52, 10, 72]], [0.18, [74, 42, 138]], [0.38, [26, 122, 148]],
+  [0.58, [38, 170, 126]], [0.78, [154, 216, 58]], [1.00, [248, 248, 70]],
+];
+
+function heatColour(t) {
+  const x = clamp(t, 0, 1);
+  for (let i = 1; i < HEAT_STOPS.length; i++) {
+    const [p1, c1] = HEAT_STOPS[i - 1], [p2, c2] = HEAT_STOPS[i];
+    if (x <= p2) {
+      const k = (x - p1) / (p2 - p1 || 1);
+      return [0, 1, 2].map((j) => Math.round(c1[j] + (c2[j] - c1[j]) * k));
+    }
+  }
+  return HEAT_STOPS.at(-1)[1];
+}
+
+function projectedCanvas(root, label) {
+  root.innerHTML = '<canvas id="liquidationChart" aria-label="' + label + '"></canvas>';
+  return resizeCanvas($('#liquidationChart'));
+}
+
+function renderProjectedHeatmap() {
+  const root = $('#liquidationHeatmap');
+  const model = state.liquidationLevels?.levels;
+  const buckets = model?.buckets ?? [];
+  const mark = Number(state.liquidationLevels?.mark ?? state.mids[state.asset] ?? 0);
+
+  if (!buckets.length) {
+    root.innerHTML = '<div class="empty-cell">BUILDING LIQUIDATION MODEL — NEEDS OPEN-INTEREST HISTORY</div>';
+    return;
+  }
+
+  const { ctx, width, height } = projectedCanvas(root, 'Projected liquidation heatmap');
+  const pad = { top: 16, right: 74, bottom: 26, left: 46 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+
+  const startMs = buckets[0].startMs, endMs = buckets.at(-1).endMs;
+  const prices = buckets.flatMap((b) => b.levels.map((l) => l.price)).filter(Number.isFinite);
+  if (!prices.length) { root.innerHTML = '<div class="empty-cell">NO PROJECTED LEVELS IN WINDOW</div>'; return; }
+
+  const candles = (state.market?.series?.candles ?? [])
+    .map((c) => ({ t: Number(c.t ?? c.time ?? c.startMs ?? 0), o: +c.o, h: +c.h, l: +c.l, c: +c.c }))
+    .filter((c) => Number.isFinite(c.c) && c.t >= startMs && c.t <= endMs);
+
+  // Frame on the traded range so the candles stay readable. A fixed +/-10% window (where
+  // 10x leverage projects) flattens price into a straight line on a quiet day, which
+  // hides the one thing the chart is for: watching price approach a level. Far-out
+  // levels clip instead.
+  let span;
+  if (candles.length > 1 && mark > 0) {
+    const ch = Math.max(...candles.map((c) => c.h)), cl = Math.min(...candles.map((c) => c.l));
+    const half = Math.max(ch - mark, mark - cl, (ch - cl) / 2, 0);
+    span = clamp(half * 3, mark * 0.015, mark * 0.12);
+  } else {
+    span = mark > 0 ? mark * 0.05 : (Math.max(...prices) - Math.min(...prices)) / 2 || 1;
+  }
+  const hi = mark > 0 ? mark + span : Math.max(...prices);
+  const lo = mark > 0 ? mark - span : Math.min(...prices);
+  const range = hi - lo || 1;
+
+  const xOf = (ms) => pad.left + (ms - startMs) / Math.max(1, endMs - startMs) * plotW;
+  const yOf = (p) => pad.top + (1 - (p - lo) / range) * plotH;
+
+  const visible = (l) => state.liquidationSide === 'long' ? l.long : state.liquidationSide === 'short' ? l.short : l.total;
+  const peak = Math.max(...buckets.flatMap((b) => b.levels.map(visible)), 1);
+  const bin = Number(model.priceBin) || range / 80;
+  const cellH = Math.max(1.5, (bin / range) * plotH);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#120318';
+  ctx.fillRect(0, 0, width, height);
+  const base = heatColour(0);
+  ctx.fillStyle = 'rgb(' + base[0] + ',' + base[1] + ',' + base[2] + ')';
+  ctx.fillRect(pad.left, pad.top, plotW, plotH);
+
+  // Bands: a level repeated across consecutive buckets paints a continuous horizontal run.
+  for (let i = 0; i < buckets.length; i++) {
+    const x0 = xOf(buckets[i].startMs);
+    const x1 = i < buckets.length - 1 ? xOf(buckets[i + 1].startMs) : pad.left + plotW;
+    const w = Math.max(1, x1 - x0 + 0.5);
+    for (const l of buckets[i].levels) {
+      const v = visible(l);
+      if (v <= 0 || l.price < lo || l.price > hi) continue;
+      const c = heatColour(Math.pow(v / peak, 0.45));
+      ctx.fillStyle = 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+      ctx.fillRect(x0, yOf(l.price) - cellH / 2, w, cellH);
+    }
+  }
+
+  // Candles over the model.
+  if (candles.length > 1) {
+    const step = (candles.at(-1).t - candles[0].t) / Math.max(1, candles.length - 1);
+    const cw = Math.max(1.5, Math.min(7, (step / Math.max(1, endMs - startMs)) * plotW * 0.6));
+    for (const c of candles) {
+      const cx = xOf(c.t);
+      const up = c.c >= c.o;
+      ctx.strokeStyle = up ? 'rgba(235,255,245,.85)' : 'rgba(255,170,190,.85)';
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, clamp(yOf(c.h), pad.top, pad.top + plotH));
+      ctx.lineTo(cx, clamp(yOf(c.l), pad.top, pad.top + plotH));
+      ctx.stroke();
+      const top = clamp(yOf(Math.max(c.o, c.c)), pad.top, pad.top + plotH);
+      const bot = clamp(yOf(Math.min(c.o, c.c)), pad.top, pad.top + plotH);
+      ctx.fillRect(cx - cw / 2, top, cw, Math.max(1, bot - top));
+    }
+  }
+
+  // Colour scale, so the brightness means something.
+  const barX = 12, barY = pad.top + 6, barW = 10, barH = Math.max(40, plotH - 40);
+  for (let i = 0; i <= barH; i++) {
+    const c = heatColour(1 - i / barH);
+    ctx.fillStyle = 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+    ctx.fillRect(barX, barY + i, barW, 1);
+  }
+  ctx.font = '9px IBM Plex Mono, monospace';
+  ctx.fillStyle = '#c9b8d6';
+  ctx.textAlign = 'left';
+  ctx.fillText(compactUSD(peak), barX - 4, barY - 4);
+  ctx.fillText('0', barX - 4, barY + barH + 10);
+
+  // Price axis.
+  ctx.fillStyle = '#b9a8c6';
+  for (let i = 0; i <= 6; i++) {
+    const p = lo + range * (i / 6);
+    const py = yOf(p);
+    ctx.strokeStyle = 'rgba(220,200,240,.07)';
+    ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke();
+    ctx.fillText('$' + fmtPrice(p), pad.left + plotW + 5, py + 3);
+  }
+
+  if (mark > 0 && mark >= lo && mark <= hi) {
+    const py = yOf(mark);
+    ctx.save();
+    ctx.setLineDash([5, 4]); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke();
+    ctx.restore();
+    ctx.font = 'bold 10px IBM Plex Mono, monospace';
+    const t = '$' + fmtPrice(mark);
+    ctx.fillStyle = 'rgba(255,255,255,.18)';
+    ctx.fillRect(pad.left + plotW + 2, py - 8, ctx.measureText(t).width + 10, 16);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(t, pad.left + plotW + 7, py + 3);
+  }
+
+  // Time axis.
+  ctx.textAlign = 'center';
+  ctx.font = '9px IBM Plex Mono, monospace';
+  ctx.fillStyle = '#8f7fa0';
+  const labels = Math.min(7, buckets.length);
+  for (let i = 0; i < labels; i++) {
+    const idx = Math.round(i * (buckets.length - 1) / Math.max(1, labels - 1));
+    ctx.fillText(new Date(buckets[idx].startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), xOf(buckets[idx].startMs), height - 9);
+  }
+
+  // Say plainly how much is real OI and how much is the volume stand-in.
+  const oi = buckets.filter((b) => b.source === 'oi').length;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = oi === buckets.length ? '#7fe3a8' : '#d8b24a';
+  ctx.fillText('MODELLED · ' + oi + '/' + buckets.length + ' buckets from open interest, rest volume proxy', pad.left + 2, 11);
+}
+
+function renderProjectedMap() {
+  const root = $('#liquidationHeatmap');
+  const map = state.liquidationLevels?.map;
+  const mark = Number(state.liquidationLevels?.mark ?? state.mids[state.asset] ?? 0);
+  const all = map?.levels ?? [];
+  const rows = all.filter((l) => {
+    if (!(l.price > 0)) return false;
+    if (state.liquidationSide === 'long') return l.long > 0;
+    if (state.liquidationSide === 'short') return l.short > 0;
+    return l.total > 0;
+  });
+
+  if (!rows.length || !(mark > 0)) {
+    root.innerHTML = '<div class="empty-cell">BUILDING LIQUIDATION MODEL — NEEDS OPEN-INTEREST HISTORY</div>';
+    return;
+  }
+
+  const { ctx, width, height } = projectedCanvas(root, 'Projected liquidation map');
+  const pad = { top: 34, right: 18, bottom: 34, left: 62 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+
+  const lo = Math.min(...rows.map((r) => r.price), mark);
+  const hi = Math.max(...rows.map((r) => r.price), mark);
+  const range = hi - lo || 1;
+  const peak = Math.max(...rows.map((r) => Math.max(r.long, r.short)), 1);
+
+  const xOf = (p) => pad.left + ((p - lo) / range) * plotW;
+  const hOf = (v) => (v / peak) * plotH;
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#0a0710';
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.font = '9px IBM Plex Mono, monospace';
+  ctx.fillStyle = '#7d708c';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = peak * (i / 4);
+    const py = pad.top + plotH - hOf(v);
+    ctx.strokeStyle = 'rgba(200,180,230,.08)';
+    ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke();
+    ctx.fillText(compactUSD(v), pad.left - 7, py + 3);
+  }
+
+  const barW = Math.max(1.5, plotW / Math.max(rows.length, 40) * 0.8);
+  for (const r of rows) {
+    const x = xOf(r.price);
+    // Longs liquidate below the mark, shorts above; colour follows that split.
+    if (state.liquidationSide !== 'short' && r.long > 0) {
+      ctx.fillStyle = 'rgba(255,96,112,.85)';
+      ctx.fillRect(x - barW / 2, pad.top + plotH - hOf(r.long), barW, hOf(r.long));
+    }
+    if (state.liquidationSide !== 'long' && r.short > 0) {
+      ctx.fillStyle = 'rgba(64,220,190,.85)';
+      ctx.fillRect(x - barW / 2, pad.top + plotH - hOf(r.short), barW, hOf(r.short));
+    }
+  }
+
+  const mx = xOf(mark);
+  ctx.save();
+  ctx.setLineDash([4, 4]); ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(mx, pad.top); ctx.lineTo(mx, pad.top + plotH); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = '#ffd34d'; ctx.textAlign = 'center'; ctx.font = 'bold 10px IBM Plex Mono, monospace';
+  ctx.fillText('MARK $' + fmtPrice(mark), mx, pad.top - 8);
+
+  ctx.font = '9px IBM Plex Mono, monospace';
+  ctx.fillStyle = '#ff6070'; ctx.textAlign = 'left';
+  ctx.fillText('LONG LIQUIDATIONS', pad.left, 16);
+  ctx.fillStyle = '#40dcbe'; ctx.textAlign = 'right';
+  ctx.fillText('SHORT LIQUIDATIONS', pad.left + plotW, 16);
+
+  ctx.fillStyle = '#7d708c'; ctx.textAlign = 'center';
+  for (let i = 0; i <= 6; i++) {
+    const p = lo + range * (i / 6);
+    ctx.fillText('$' + fmtPrice(p), xOf(p), height - 11);
+  }
+}
+
 async function loadLiquidations() {
   if (liquidationBusy) return;
   liquidationBusy = true;
@@ -776,11 +1025,13 @@ async function loadLiquidations() {
     $('#liquidationRows').innerHTML = Array.from({ length: 4 }, () => '<tr class="skeleton-row"><td colspan="6"><div class="skeleton-line"></div></td></tr>').join('');
   }
   try {
-    const [data, liquidationMap, fullHeatmap] = await Promise.all([
+    const [data, liquidationMap, fullHeatmap, levels] = await Promise.all([
       getJSON(`/api/collector?asset=${state.asset}`),
       getJSON(`/api/liquidation-map?asset=${state.asset}`),
       getJSON(`/api/liquidation-heatmap?asset=${state.asset}&window=${state.liquidationWindow}`).catch(() => null),
+      getJSON(`/api/liquidation-levels?asset=${state.asset}&window=${state.liquidationWindow}`).catch(() => null),
     ]);
+    if (levels) state.liquidationLevels = levels;
     if (generation !== fundingGeneration || state.mode !== 'liquidation') return;
     renderLiquidations(data, liquidationMap, fullHeatmap);
   } catch (error) {

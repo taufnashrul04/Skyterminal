@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { fetchAllMids, fetchMarketData } from './lib/hyperliquid.js';
 import { buildMarketSnapshot } from './lib/indicators.js';
 import { buildFundingSnapshot } from './lib/funding.js';
-import { fetchCollectorSummary, fetchLiquidationHeatmapForWindow } from './lib/collector.js';
+import { fetchCollectorSummary, fetchLiquidationHeatmapForWindow, fetchLiquidationLevels } from './lib/collector.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PUBLIC = path.join(ROOT, 'public');
@@ -87,6 +87,7 @@ export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader
   const getFunding = cached(fundingLoader, 30_000);
   const getCollector = cached(collectorLoader, 2_000);
   const getLiqHeatmap = cached(fetchLiquidationHeatmapForWindow, 30_000);
+  const getLiqLevels = cached(fetchLiquidationLevels, 20_000);
   const clients = new Map();
   let inFlight = 0;
   return http.createServer(async (request, response) => {
@@ -128,6 +129,16 @@ export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader
         const interval = String(url.searchParams.get('interval') ?? '5m');
         const includeTrades = url.searchParams.get('flow') === '1';
         return sendJson(response, 200, await getMarket(coin, interval, includeTrades));
+      }
+      if (url.pathname === '/api/liquidation-levels') {
+        const asset = String(url.searchParams.get('asset') ?? 'BTC').toUpperCase();
+        const windowParam = String(url.searchParams.get('window') ?? '24h');
+        const WINDOW_MS = { '24h': 86_400_000, '4h': 14_400_000, '1h': 3_600_000, '15m': 900_000 };
+        const windowMs = WINDOW_MS[windowParam] ?? 86_400_000;
+        const mids = await getMids();
+        const mark = mids[asset] ?? 0;
+        const data = await getLiqLevels(asset, windowMs, mark);
+        return sendJson(response, 200, { mark, ...data });
       }
       if (url.pathname === '/api/liquidation-heatmap') {
         const asset = String(url.searchParams.get('asset') ?? 'BTC').toUpperCase();
