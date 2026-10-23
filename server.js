@@ -149,9 +149,21 @@ export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader
         return sendJson(response, 200, { mark: mids[asset] ?? null, heatmap });
       }
       if (url.pathname === '/api/liquidation-map') {
+        // Serves the ladder view. This returns the collector's own projected model; an
+        // earlier version answered with an empty list, which rendered as a blank chart
+        // rather than as a failure anyone would notice.
         const asset = String(url.searchParams.get('asset') ?? 'BTC').toUpperCase();
         const mids = await getMids();
-        return sendJson(response, 200, { mark: mids[asset] ?? null, levels: [], source: 'collector-unavailable' });
+        const mark = mids[asset] ?? 0;
+        const { map } = await getLiqLevels(asset, 86_400_000, mark);
+        // The ladder consumes one row per side, keyed by distance from the mark.
+        const levels = [];
+        for (const level of map?.levels ?? []) {
+          if (level.distancePct == null) continue;
+          if (level.long > 0) levels.push({ distancePct: level.distancePct, side: 'long', notional: level.long, estimated: true });
+          if (level.short > 0) levels.push({ distancePct: level.distancePct, side: 'short', notional: level.short, estimated: true });
+        }
+        return sendJson(response, 200, { asset, mark, method: 'MODELLED_FROM_OPEN_INTEREST', levels });
       }
       if (await serveStatic(response, decodeURIComponent(url.pathname), publicDir)) return;
       sendJson(response, 404, { error: 'Not found' });
