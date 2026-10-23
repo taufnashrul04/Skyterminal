@@ -20,6 +20,7 @@ let fundingGeneration = 0;
 let collectorGeneration = 0;
 let collectorLiveBusy = false;
 let liquidationBusy = false;
+let projectedFallbackUsed = false;
 let modeAbort = new AbortController();
 
 const $ = (selector) => document.querySelector(selector);
@@ -1032,6 +1033,15 @@ async function loadLiquidations() {
       getJSON(`/api/liquidation-levels?asset=${state.asset}&window=${state.liquidationWindow}`).catch(() => null),
     ]);
     if (levels) state.liquidationLevels = levels;
+    // The projected model needs a collector serving /v1/liquidations/levels. Where that
+    // is missing, landing on an empty chart tells the visitor nothing, so fall back to
+    // the actual-events view once — and move the selector with it, so the view on screen
+    // is the one the dropdown names. Only once, or it would fight a deliberate choice.
+    if (!projectedFallbackUsed && state.liquidationView === 'projected' && !levels?.levels?.buckets?.length) {
+      projectedFallbackUsed = true;
+      state.liquidationView = 'heatmap';
+      $('#liquidationView').value = 'heatmap';
+    }
     if (generation !== fundingGeneration || state.mode !== 'liquidation') return;
     renderLiquidations(data, liquidationMap, fullHeatmap);
   } catch (error) {
