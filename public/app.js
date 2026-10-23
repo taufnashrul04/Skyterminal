@@ -13,13 +13,14 @@ const WORKSPACES = {
   'range-charting': { label: 'RANGE CHARTING', mode: 'market', asset: 'BTC', timeframe: '5m' },
   'tpo-volume': { label: 'TPO / VOLUME PROFILE', mode: 'market', asset: 'BTC', timeframe: '1h' },
 };
-const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '24h', liquidationView: 'levels', fundingHorizon: 4, liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, liquidationMap: null, mids: {}, matrix: {}, busy: false };
+const state = { mode: 'market', workspace: 'core', asset: 'BTC', timeframe: '5m', liquidationWindow: '24h', liquidationView: 'levels', fundingHorizon: 4, liquidationSide: 'all', market: null, collector: null, funding: null, liquidations: null, liquidationMap: null, heatmapFull: null, mids: {}, matrix: {}, busy: false };
 let marketGeneration = 0;
 let matrixGeneration = 0;
 let fundingGeneration = 0;
 let collectorGeneration = 0;
 let collectorLiveBusy = false;
 let liquidationBusy = false;
+let modeAbort = new AbortController();
 
 const $ = (selector) => document.querySelector(selector);
 const fmtPrice = (value) => Number(value).toLocaleString('en-US', { minimumFractionDigits: Number(value) < 100 ? 2 : 1, maximumFractionDigits: Number(value) < 10 ? 4 : 2 });
@@ -78,9 +79,9 @@ function setupCollapsiblePanels() {
 }
 
 async function getJSON(url, options = {}) {
-  const response = await fetch(url, { cache: 'no-store', ...options });
+  const response = await fetch(url, { cache: 'no-store', signal: modeAbort.signal, ...options });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+  if (!response.ok) throw Object.assign(new Error(data.error || `HTTP ${response.status}`), { statusCode: response.status });
   return data;
 }
 
@@ -121,6 +122,8 @@ function selectWorkspace(id) {
 function selectMode(mode) {
   if (!['market', 'funding', 'liquidation'].includes(mode)) return;
   state.mode = mode;
+  modeAbort.abort();
+  modeAbort = new AbortController();
   marketGeneration += 1;
   matrixGeneration += 1;
   fundingGeneration += 1;
@@ -307,6 +310,7 @@ async function loadMarket() {
     renderMatrix();
     setStatus(`${asset} ${timeframe.toUpperCase()} UPDATED`, 'live');
   } catch (error) {
+    if (error.name === 'AbortError') return;
     if (generation === marketGeneration && state.mode === 'market') setStatus(error.message, 'error');
   }
 }
@@ -316,7 +320,7 @@ async function loadCollectorLive(asset = state.asset) {
   collectorLiveBusy = true;
   const generation = ++collectorGeneration;
   try { const summary = await getJSON(`/api/collector?asset=${asset}&window=1m&scope=live`); if (generation === collectorGeneration && asset === state.asset && state.mode === 'market') renderCollectorSummary(summary); }
-  catch { if (generation === collectorGeneration && asset === state.asset && state.mode === 'market') renderCollectorSummary({ available: false, error: 'collector request failed' }); }
+  catch (error) { if (error.name === 'AbortError') return; if (generation === collectorGeneration && asset === state.asset && state.mode === 'market') renderCollectorSummary({ available: false, error: 'collector request failed' }); }
   finally { collectorLiveBusy = false; }
 }
 
@@ -421,12 +425,17 @@ function renderFunding(data) {
 async function loadFunding() {
   const generation = ++fundingGeneration;
   setStatus('SYNCING FUNDING VENUES…', 'pending');
+  if (!state.funding) {
+    $('#opportunityRows').innerHTML = Array.from({ length: 5 }, () => '<tr class="skeleton-row"><td colspan="10"><div class="skeleton-line"></div></td></tr>').join('');
+    $('#fundingRows').innerHTML = Array.from({ length: 8 }, () => '<tr class="skeleton-row"><td colspan="6"><div class="skeleton-line"></div></td></tr>').join('');
+  }
   try {
     const data = await getJSON('/api/funding');
     if (generation !== fundingGeneration || state.mode !== 'funding') return;
     renderFunding(data);
     setStatus(`FUNDING TRACKER · ${(data.routes ?? data.opportunities).length} ROUTES`, 'live');
   } catch (error) {
+    if (error.name === 'AbortError') return;
     if (generation === fundingGeneration && state.mode === 'funding') {
       $('#fundingQuality').textContent = 'DEGRADED';
       $('#fundingQuality').className = 'quality bad';
@@ -435,9 +444,10 @@ async function loadFunding() {
   }
 }
 
-function renderLiquidations(summary, liquidationMap = null) {
+function renderLiquidations(summary, liquidationMap = null, fullHeatmap = null) {
   state.liquidations = summary;
   state.liquidationMap = liquidationMap;
+  if (fullHeatmap !== null) state.heatmapFull = fullHeatmap;
   const analytics = summary?.analytics?.liquidations;
   const totals = analytics?.totals;
   const buckets = analytics?.buckets ?? [];
@@ -461,7 +471,7 @@ function renderLiquidations(summary, liquidationMap = null) {
 }
 
 function renderLiquidationView(heatmap, model) {
-  if (state.liquidationView === 'heatmap') return renderLiquidationHeatmap(heatmap);
+  if (state.liquidationView === 'heatmap') return renderLiquidationHeatmap();
   if (state.liquidationView === 'history') return renderLiquidationHistory(heatmap);
   return renderLiquidationLadder(heatmap, model);
 }
@@ -565,39 +575,196 @@ function renderLiquidationMap(heatmap, model = null) {
   ctx.textAlign = 'center'; ctx.fillStyle = '#858f98'; for (const pctLabel of [-25, -19, -13, -6, 0, 6, 13, 19, 25]) ctx.fillText(`${pctLabel > 0 ? '+' : ''}${pctLabel}%`, x(pctLabel), height - 13);
 }
 
-function renderLiquidationHeatmap(heatmap) {
-  const buckets = heatmap?.buckets ?? [];
-  const visible = (level) => state.liquidationSide === 'long' ? { ...level, total: level.long } : state.liquidationSide === 'short' ? { ...level, total: level.short } : level;
-  if (!buckets.length) { $('#liquidationHeatmap').innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>'; return; }
-  const maxColumns = 64; const groupSize = Math.max(1, Math.ceil(buckets.length / maxColumns)); const displayBuckets = [];
-  for (let start = 0; start < buckets.length; start += groupSize) {
-    const group = buckets.slice(start, start + groupSize); const byPrice = new Map();
-    group.forEach((bucket) => (bucket.levels ?? []).forEach((raw) => {
-      const level = visible(raw); const key = String(raw.price); const current = byPrice.get(key) ?? { price: raw.price, long: 0, short: 0, unknown: 0, total: 0 };
-      current.long += Number(raw.long) || 0; current.short += Number(raw.short) || 0; current.unknown += Number(raw.unknown) || 0; current.total += Number(level.total) || 0; byPrice.set(key, current);
-    }));
-    displayBuckets.push({ startMs: group[0].startMs, endMs: group.at(-1).endMs, levels: [...byPrice.values()] });
+function renderLiquidationHeatmap() {
+  const fullHeatmap = state.heatmapFull;
+  const heatmap = fullHeatmap?.heatmap;
+  const mark = Number(fullHeatmap?.mark ?? state.mids[state.asset] ?? state.market?.price);
+  const root = $('#liquidationHeatmap');
+
+  const sideFilter = state.liquidationSide;
+  const rawBuckets = heatmap?.buckets ?? [];
+
+  if (!rawBuckets.length) {
+    root.innerHTML = '<div class="empty-cell">ACCUMULATING LIQUIDATION DATA — COLLECTOR BUILDS HISTORY IN REAL TIME</div>';
+    return;
   }
-  const allPrices = displayBuckets.flatMap((bucket) => bucket.levels.map((level) => Number(level.price))).filter(Number.isFinite);
-  if (!allPrices.length) { $('#liquidationHeatmap').innerHTML = '<div class="empty-cell">NO ACTUAL LIQUIDATION LEVELS IN WINDOW</div>'; return; }
-  const minPrice = Math.min(...allPrices); const maxPrice = Math.max(...allPrices); const range = maxPrice - minPrice || Math.max(maxPrice * .01, 1); const maxTotal = Math.max(...displayBuckets.flatMap((bucket) => bucket.levels.map((level) => level.total)), 1);
-  const root = $('#liquidationHeatmap'); root.innerHTML = '<canvas id="liquidationChart" aria-label="Liquidation heatmap"></canvas><div class="heatmap-legend"><span><i class="liquidation-leverage"></i>LIQUIDATION LEVERAGE</span><span><i class="supercharts"></i>ACTUAL LIQUIDATION EVENTS</span><small>TIME × PRICE · EVENT-DERIVED</small></div>';
-  const canvas = $('#liquidationChart'); const { ctx, width, height } = resizeCanvas(canvas); const pad = { top: 10, right: 62, bottom: 32, left: 8 }; const plotW = width - pad.left - pad.right; const plotH = height - pad.top - pad.bottom;
-  const x = (index) => pad.left + (displayBuckets.length <= 1 ? plotW / 2 : index / (displayBuckets.length - 1) * plotW); const y = (price) => pad.top + ((maxPrice - Number(price)) / range) * plotH;
-  ctx.clearRect(0, 0, width, height); ctx.fillStyle = '#330348'; ctx.fillRect(0, 0, width, height); ctx.fillStyle = 'rgba(131,30,160,.16)'; ctx.fillRect(pad.left, pad.top, plotW, plotH);
-  ctx.strokeStyle = 'rgba(165,104,190,.12)'; ctx.lineWidth = 1; ctx.font = '10px IBM Plex Mono, monospace'; ctx.textAlign = 'right'; ctx.fillStyle = '#b9b3c4';
-  for (let i = 0; i <= 6; i += 1) { const price = maxPrice - range * i / 6; const py = y(price); ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke(); ctx.fillText(fmtPrice(price), width - 7, py + 3); }
-  displayBuckets.forEach((bucket, index) => {
-    const left = index === 0 ? pad.left : x(index) - (x(1) - x(0)) / 2; const right = index === displayBuckets.length - 1 ? pad.left + plotW : x(index) + (x(1) - x(0)) / 2; const cellWidth = Math.max(2, right - left - 1);
-    bucket.levels.forEach((level) => {
-      if (level.total <= 0) return; const long = Number(level.long) || 0; const short = Number(level.short) || 0; const intensity = Math.min(1, level.total / maxTotal); const color = long > short * 1.15 ? [255, 71, 170] : short > long * 1.15 ? [39, 227, 165] : [222, 240, 53]; const alpha = .34 + intensity * .66; const bandH = Math.max(3, Math.min(10, 3 + intensity * 7));
-      ctx.fillStyle = `rgba(${color[0]},${color[1]},${color[2]},${alpha})`; ctx.shadowColor = `rgba(${color[0]},${color[1]},${color[2]},${intensity * .7})`; ctx.shadowBlur = intensity > .45 ? 8 : 0; ctx.fillRect(left, y(level.price) - bandH / 2, cellWidth, bandH); ctx.shadowBlur = 0;
-    });
-  });
-  const candles = state.market?.series?.candles ?? []; const startMs = buckets[0].startMs; const endMs = buckets.at(-1).endMs; const path = candles.filter((c) => Number(c.c) >= 0).map((c) => ({ price: Number(c.c), time: Number(c.t ?? c.time ?? c.startMs ?? 0) })).filter((c) => c.time >= startMs && c.time <= endMs && c.price >= minPrice - range * .12 && c.price <= maxPrice + range * .12);
-  if (path.length > 1) { ctx.save(); ctx.strokeStyle = '#7cf7ed'; ctx.lineWidth = 1.3; ctx.shadowColor = '#7cf7ed'; ctx.shadowBlur = 4; ctx.beginPath(); path.forEach((point, index) => { const px = pad.left + ((point.time - startMs) / Math.max(1, endMs - startMs)) * plotW; const py = y(point.price); if (index === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.stroke(); ctx.restore(); }
-  const live = Number(state.mids[state.asset]); if (Number.isFinite(live) && live >= minPrice && live <= maxPrice) { const py = y(live); ctx.strokeStyle = '#ffffff'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(pad.left + plotW, py, 3, 0, Math.PI * 2); ctx.fill(); }
-  ctx.textAlign = 'center'; ctx.fillStyle = '#b9b3c4'; const labels = Math.min(7, displayBuckets.length); for (let i = 0; i < labels; i += 1) { const index = Math.round(i * (displayBuckets.length - 1) / Math.max(1, labels - 1)); ctx.fillText(new Date(displayBuckets[index].startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), x(index), height - 11); }
+
+  // Filter levels by side, merge small buckets to at most 96 columns
+  const MAX_COLS = 96;
+  const groupSize = Math.max(1, Math.ceil(rawBuckets.length / MAX_COLS));
+  const buckets = [];
+  for (let start = 0; start < rawBuckets.length; start += groupSize) {
+    const group = rawBuckets.slice(start, start + groupSize);
+    const byPrice = new Map();
+    group.forEach((b) => (b.levels ?? []).forEach((lv) => {
+      const key = String(lv.price);
+      const cur = byPrice.get(key) ?? { price: lv.price, long: 0, short: 0, unknown: 0, total: 0 };
+      const longVal  = sideFilter === 'short' ? 0 : (Number(lv.long)  || 0);
+      const shortVal = sideFilter === 'long'  ? 0 : (Number(lv.short) || 0);
+      cur.long  += longVal; cur.short += shortVal;
+      cur.unknown += Number(lv.unknown) || 0;
+      cur.total += sideFilter === 'all' ? (Number(lv.total) || 0) : longVal + shortVal;
+      byPrice.set(key, cur);
+    }));
+    buckets.push({ startMs: group[0].startMs, endMs: group.at(-1).endMs, levels: [...byPrice.values()] });
+  }
+
+  const allPrices = buckets.flatMap((b) => b.levels.map((l) => Number(l.price))).filter(Number.isFinite);
+  if (!allPrices.length) { root.innerHTML = '<div class="empty-cell">NO LIQUIDATION PRICE LEVELS IN SELECTED WINDOW</div>'; return; }
+
+  root.innerHTML = '<canvas id="liquidationChart" aria-label="Liquidation heatmap"></canvas>';
+  const canvas = $('#liquidationChart');
+  const { ctx, width, height } = resizeCanvas(canvas);
+
+  const pad = { top: 20, right: 78, bottom: 26, left: 4 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+
+  const startMs = buckets[0].startMs;
+  const endMs   = buckets.at(-1).endMs;
+
+  // Price range: prefer candle data for full coverage
+  const rawCandles = (state.market?.series?.candles ?? [])
+    .map((c) => ({ t: Number(c.t ?? c.time ?? c.startMs ?? 0), o: Number(c.o), h: Number(c.h), l: Number(c.l), c: Number(c.c) }))
+    .filter((c) => Number.isFinite(c.c) && c.t >= startMs - 3_600_000 && c.t <= endMs + 3_600_000);
+
+  let priceHigh, priceLow;
+  if (rawCandles.length >= 2) {
+    priceHigh = Math.max(...rawCandles.map((c) => c.h));
+    priceLow  = Math.min(...rawCandles.map((c) => c.l));
+    const rng = priceHigh - priceLow || priceHigh * 0.02;
+    priceHigh += rng * 0.04; priceLow -= rng * 0.04;
+  } else {
+    const hi = Math.max(...allPrices), lo = Math.min(...allPrices);
+    const rng = hi - lo || (mark > 0 ? mark * 0.1 : 1000);
+    priceHigh = hi + rng * 0.08; priceLow = lo - rng * 0.08;
+  }
+  const priceRange = priceHigh - priceLow || 1;
+
+  // Coordinate transforms
+  const xOf = (ms)    => pad.left + (ms - startMs) / Math.max(1, endMs - startMs) * plotW;
+  const yOf = (price) => pad.top  + (1 - (price - priceLow) / priceRange) * plotH;
+
+  // Cell dimensions
+  const priceBinUSD = heatmap?.priceBin ? Number(heatmap.priceBin) : (priceRange / 60);
+  const cellH = Math.max(2, (priceBinUSD / priceRange) * plotH);
+
+  // Max notional for color scaling (use notional = qty × price)
+  const maxNotional = Math.max(...buckets.flatMap((b) => b.levels.map((l) => (Number(l.total) || 0) * Number(l.price))), 1);
+
+  // ── Background ──
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#06090f';
+  ctx.fillRect(0, 0, width, height);
+
+  // ── Grid lines ──
+  ctx.strokeStyle = 'rgba(80,100,120,.07)';
+  ctx.lineWidth = 1;
+  ctx.font = '9px IBM Plex Mono, monospace';
+  ctx.fillStyle = '#3a4854';
+  ctx.textAlign = 'left';
+  const NUM_GRID = 7;
+  for (let i = 0; i <= NUM_GRID; i++) {
+    const price = priceLow + priceRange * (i / NUM_GRID);
+    const py = yOf(price);
+    if (py < pad.top - 4 || py > pad.top + plotH + 4) continue;
+    ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke();
+    ctx.fillText(`$${fmtPrice(price)}`, pad.left + plotW + 5, py + 3);
+  }
+
+  // ── Heatmap cells (thermal color: warm for longs, cool for shorts) ──
+  for (let bi = 0; bi < buckets.length; bi++) {
+    const bucket = buckets[bi];
+    const x0 = xOf(bucket.startMs);
+    const x1 = bi < buckets.length - 1 ? xOf(buckets[bi + 1].startMs) : pad.left + plotW;
+    const bw = Math.max(1, x1 - x0 - 0.5);
+
+    for (const lv of bucket.levels) {
+      const price = Number(lv.price);
+      if (!Number.isFinite(price) || price < priceLow || price > priceHigh) continue;
+      const notional = (Number(lv.total) || 0) * price;
+      if (notional <= 0) continue;
+
+      const longQty  = Number(lv.long)  || 0;
+      const shortQty = Number(lv.short) || 0;
+      const intensity = Math.pow(notional / maxNotional, 0.32);
+      const alpha = 0.16 + intensity * 0.84;
+      const longFrac = longQty / Math.max(longQty + shortQty, 0.001);
+
+      let r, g, b;
+      if (longFrac > 0.65) {
+        // Long-dominated: yellow → orange → red
+        r = 255; g = Math.round(215 - 170 * intensity); b = Math.round(25 * (1 - intensity));
+      } else if (longFrac < 0.35) {
+        // Short-dominated: cyan → teal → blue
+        r = Math.round(25 * (1 - intensity)); g = Math.round(185 + 70 * intensity); b = 255;
+      } else {
+        // Mixed / unknown: golden-yellow → white
+        r = 255; g = Math.round(200 + 55 * intensity); b = Math.round(80 * (1 - intensity));
+      }
+
+      ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+      if (intensity > 0.5) { ctx.shadowColor = `rgba(${r},${g},${b},${intensity * 0.45})`; ctx.shadowBlur = 5 + intensity * 9; }
+      ctx.fillRect(x0, yOf(price) - cellH / 2, bw, Math.max(2, cellH));
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // ── Candlesticks ──
+  if (rawCandles.length > 1) {
+    const sorted = [...rawCandles].sort((a, b) => a.t - b.t);
+    const avgInterval = (sorted.at(-1).t - sorted[0].t) / Math.max(1, sorted.length - 1);
+    const cw = Math.max(2, Math.min(10, (avgInterval / Math.max(1, endMs - startMs)) * plotW * 0.65));
+
+    for (const c of sorted) {
+      if (c.c < priceLow * 0.99 || c.c > priceHigh * 1.01) continue;
+      const cx = xOf(c.t);
+      if (cx < pad.left - cw * 2 || cx > pad.left + plotW + cw * 2) continue;
+      const isUp = c.c >= c.o;
+      const candleColor = isUp ? 'rgba(56,211,141,.78)' : 'rgba(238,74,94,.78)';
+      ctx.strokeStyle = candleColor; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, clamp(yOf(c.h), pad.top, pad.top + plotH));
+      ctx.lineTo(cx, clamp(yOf(c.l), pad.top, pad.top + plotH));
+      ctx.stroke();
+      const bodyTop = clamp(yOf(Math.max(c.o, c.c)), pad.top, pad.top + plotH);
+      const bodyBot = clamp(yOf(Math.min(c.o, c.c)), pad.top, pad.top + plotH);
+      ctx.fillStyle = candleColor;
+      ctx.fillRect(cx - cw / 2, bodyTop, cw, Math.max(1, bodyBot - bodyTop));
+    }
+  }
+
+  // ── Mark price line ──
+  if (Number.isFinite(mark) && mark >= priceLow && mark <= priceHigh) {
+    const py = yOf(mark);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.6)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(pad.left + plotW, py); ctx.stroke();
+    ctx.restore();
+    const labelText = `$${fmtPrice(mark)}`;
+    ctx.font = 'bold 10px IBM Plex Mono, monospace';
+    const labelW = ctx.measureText(labelText).width + 10;
+    ctx.fillStyle = 'rgba(255,255,255,.14)';
+    ctx.fillRect(pad.left + plotW + 2, py - 8, labelW, 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.fillText(labelText, pad.left + plotW + 7, py + 3);
+  }
+
+  // ── Time labels ──
+  ctx.textAlign = 'center';
+  ctx.font = '9px IBM Plex Mono, monospace';
+  ctx.fillStyle = '#3a4854';
+  const numLabels = Math.min(8, buckets.length);
+  for (let i = 0; i < numLabels; i++) {
+    const idx = Math.round(i * (buckets.length - 1) / Math.max(1, numLabels - 1));
+    ctx.fillText(
+      new Date(buckets[idx].startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      xOf(buckets[idx].startMs), height - 9
+    );
+  }
 }
 
 async function loadLiquidations() {
@@ -605,17 +772,23 @@ async function loadLiquidations() {
   liquidationBusy = true;
   const generation = ++fundingGeneration;
   setStatus(`SYNCING ${state.asset} LIQUIDATIONS…`, 'pending');
+  if (!state.liquidations) {
+    $('#liquidationRows').innerHTML = Array.from({ length: 4 }, () => '<tr class="skeleton-row"><td colspan="6"><div class="skeleton-line"></div></td></tr>').join('');
+  }
   try {
-    const [data, liquidationMap] = await Promise.all([
-      getJSON(`/api/collector?asset=${state.asset}&window=${state.liquidationWindow}&scope=liquidations`),
+    const [data, liquidationMap, fullHeatmap] = await Promise.all([
+      getJSON(`/api/collector?asset=${state.asset}`),
       getJSON(`/api/liquidation-map?asset=${state.asset}`),
+      getJSON(`/api/liquidation-heatmap?asset=${state.asset}&window=${state.liquidationWindow}`).catch(() => null),
     ]);
     if (generation !== fundingGeneration || state.mode !== 'liquidation') return;
-    renderLiquidations(data, liquidationMap);
+    renderLiquidations(data, liquidationMap, fullHeatmap);
   } catch (error) {
+    if (error.name === 'AbortError') return;
     if (generation === fundingGeneration && state.mode === 'liquidation') {
       renderLiquidations({ available: false, error: error.message });
-      setStatus(error.message, 'error');
+      const msg = error.statusCode === 404 ? 'LIQUIDATION MAP UNAVAILABLE' : error.message;
+      setStatus(msg, 'error');
     }
   } finally { liquidationBusy = false; }
 }
@@ -672,10 +845,15 @@ function tickClock() { $('#clock').textContent = `${new Date().toISOString().sli
 window.addEventListener('resize', () => { if (state.market) { renderPriceChart($('#priceChart'), state.market.series.candles, state.mids[state.asset] ?? state.market.price); renderLineChart($('#deltaChart'), state.market.series.cumulativeDelta, state.market.metrics.bookImbalance >= 0 ? '#62e6a7' : '#ff5f68'); } });
 
 renderTabs(); renderMatrix(); renderUniverse(); setupCollapsiblePanels(); setupCommands(); tickClock(); loadAll();
+
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const kbdEl = $('#commandTrigger').querySelector('kbd');
+if (kbdEl) kbdEl.textContent = isMac ? '⌘K' : 'Ctrl+K';
+
 setInterval(tickClock, 30_000);
 setInterval(() => { if (state.mode === 'market') loadMarket(); }, 15_000);
-setInterval(() => { if (state.mode !== 'funding') loadOverview(); }, 1_000);
+setInterval(() => { if (state.mode !== 'funding') loadOverview(); }, 5_000);
 setInterval(() => { if (state.mode === 'market') loadMatrix(); }, 60_000);
 setInterval(() => { if (state.mode === 'funding') loadFunding(); }, 5_000);
-setInterval(() => { if (state.mode === 'liquidation') loadLiquidations(); }, 1_000);
-setInterval(() => { if (state.mode === 'market') loadCollectorLive(); }, 1_000);
+setInterval(() => { if (state.mode === 'liquidation') loadLiquidations(); }, 5_000);
+setInterval(() => { if (state.mode === 'market') loadCollectorLive(); }, 3_000);

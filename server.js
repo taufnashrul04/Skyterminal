@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { fetchAllMids, fetchMarketData } from './lib/hyperliquid.js';
 import { buildMarketSnapshot } from './lib/indicators.js';
 import { buildFundingSnapshot } from './lib/funding.js';
-import { fetchCollectorSummary } from './lib/collector.js';
+import { fetchCollectorSummary, fetchLiquidationHeatmapForWindow } from './lib/collector.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PUBLIC = path.join(ROOT, 'public');
@@ -86,6 +86,7 @@ export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader
   const getMids = cached(midsLoader, 2_000);
   const getFunding = cached(fundingLoader, 30_000);
   const getCollector = cached(collectorLoader, 2_000);
+  const getLiqHeatmap = cached(fetchLiquidationHeatmapForWindow, 30_000);
   const clients = new Map();
   let inFlight = 0;
   return http.createServer(async (request, response) => {
@@ -127,6 +128,19 @@ export function createAppServer({ marketLoader = defaultMarketLoader, midsLoader
         const interval = String(url.searchParams.get('interval') ?? '5m');
         const includeTrades = url.searchParams.get('flow') === '1';
         return sendJson(response, 200, await getMarket(coin, interval, includeTrades));
+      }
+      if (url.pathname === '/api/liquidation-heatmap') {
+        const asset = String(url.searchParams.get('asset') ?? 'BTC').toUpperCase();
+        const windowParam = String(url.searchParams.get('window') ?? '24h');
+        const WINDOW_MS = { '24h': 86_400_000, '4h': 14_400_000, '1h': 3_600_000, '15m': 900_000 };
+        const windowMs = WINDOW_MS[windowParam] ?? 86_400_000;
+        const [mids, heatmap] = await Promise.all([getMids(), getLiqHeatmap(asset, windowMs)]);
+        return sendJson(response, 200, { mark: mids[asset] ?? null, heatmap });
+      }
+      if (url.pathname === '/api/liquidation-map') {
+        const asset = String(url.searchParams.get('asset') ?? 'BTC').toUpperCase();
+        const mids = await getMids();
+        return sendJson(response, 200, { mark: mids[asset] ?? null, levels: [], source: 'collector-unavailable' });
       }
       if (await serveStatic(response, decodeURIComponent(url.pathname), publicDir)) return;
       sendJson(response, 404, { error: 'Not found' });
